@@ -52,7 +52,7 @@ Mario Bros style. Each tile carries **stress** from 0 to 1.
 
 | What | Stress per tick | Seconds to break |
 |---|---|---|
-| A player standing still (speed under 1.1 px/tick) | 1/50 | about 0.8 s |
+| A player standing still (speed under 1.1 px/tick) | 1/56 | about 0.9 s (shaking from 0.4 s) |
 | A player moving on it | 1/110 | about 3 s of pacing on the same tiles; never if you keep travelling |
 | Nobody on it | -1/260 (decays) | |
 | Landing (hard landing at 10+ px/tick) | +0.06 (+0.12) once | |
@@ -280,6 +280,11 @@ collapse.
 
 ## Presentation
 
+- Screens: title (with a live bot match behind it), Players (each seat joins
+  and picks with its own keys; number keys add bots), Stage (with stocks),
+  How to play, Controls (with a key tester), the match, Pause (resume,
+  restart, players and stage, quit), Results (placings, awards, stats,
+  rematch). Everything is keyboard-driven; settings are remembered per browser.
 - Fixed camera showing the whole stage, letterboxed to the window.
   Off-screen players get an arrow at the screen edge in their colour.
 - Player colours are per seat (P1 red, P2 blue, P3 green, P4 gold); characters

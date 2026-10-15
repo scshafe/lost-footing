@@ -37,7 +37,7 @@ export const PLAYER = Object.freeze({
 });
 
 export const CRUMBLE = Object.freeze({
-  stillRate: 1 / 50, // stress per tick from a player standing still
+  stillRate: 1 / 56, // stress per tick from a player standing still
   moveRate: 1 / 110, // stress per tick from a player moving on it
   decay: 1 / 260, // stress shed per tick with nobody on it
   shakeAt: 0.45, // visible shaking from here
