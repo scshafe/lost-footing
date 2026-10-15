@@ -293,6 +293,9 @@ collapse.
 - Tiles jitter and redden as stress rises, crack when doomed, and fall
   tumbling; respawning tiles flicker in outline. Hazard warnings are lane
   stripes, shadows and edge arrows with a siren.
+- Human players with a lobbed move ready (Glim, Fuse's charge) see a faint
+  aim arc and a landing mark; it follows the throw modifiers held (forward,
+  up). The GO banner reminds everyone to keep moving.
 - Synthesized sound (WebAudio, no files), mute with M.
 - KOs flash at the blast zone in the victim's colour, shake the screen and
   post to a feed ("P1's glue → P3").
