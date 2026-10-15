@@ -5,7 +5,7 @@
 import { BLAST, MATCH, TILE } from "./constants.js";
 import { seedToU32, randInt } from "./rng.js";
 import { stageById, buildTiles } from "./stages.js";
-import { addEvent, currentBlame } from "./common.js";
+import { addEvent, blame, currentBlame } from "./common.js";
 import { newPlayer, controlPlayer, movePlayer, surfaces, applyLoad, tickPlayer } from "./players.js";
 import { resolveContacts } from "./contact.js";
 import { updateTiles, addTempTile, isSolid, breakTile, damageTile } from "./tiles.js";
@@ -151,7 +151,10 @@ export function step(state, inputs = []) {
 }
 
 function applyWind(state, p) {
-  if (state.wind !== 0 && p.invuln === 0) p.vx += state.wind * (p.ground ? 0.8 : 1);
+  if (state.wind !== 0 && p.invuln === 0) {
+    p.vx += state.wind * (p.ground ? 0.8 : 1);
+    p.windTicks = 2;
+  }
   for (const o of state.objects) {
     if (o.type !== "gust" || o.armed > 0) continue;
     const cx = p.x + p.w / 2;
@@ -159,7 +162,8 @@ function applyWind(state, p) {
     const d = (cx - o.x) * o.dir;
     if (d < 0 || d > o.len || cy < o.y - o.hh || cy > o.y + o.hh) continue;
     p.vx += o.dir * o.force * (1 - (0.5 * d) / o.len);
-    if (o.owner !== p.seat) p.blame = { seat: o.owner, tick: state.tick, cause: "gust" };
+    p.windTicks = 2;
+    blame(state, p, o.owner, "gust");
   }
 }
 

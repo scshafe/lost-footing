@@ -62,6 +62,7 @@ export function newPlayer(seat, { kind = "human", character = "mason", difficult
     actionSlot: -1,
     drill: 0, // Pip's drill: >0 hop phase, -1 diving
     noContact: 0,
+    windTicks: 0,
     surface: "plain", // "plain" | "glue" | "oil": the coat under the feet
     blame: null,
     stats: newStats(),
@@ -85,7 +86,7 @@ export function surfaceUnder(state, p) {
 }
 
 const PLAIN = { speed: 1, accel: 1, friction: PLAYER.groundFriction, overDecay: PLAYER.overGroundDecay, jump: 1 };
-const GLUE = { speed: 0.18, accel: 0.4, friction: 0.5, overDecay: 0.6, jump: 0.55 };
+const GLUE = { speed: 0.1, accel: 0.4, friction: 0.5, overDecay: 0.6, jump: 0.55 };
 const OIL = { speed: 1.25, accel: 0.25, friction: 0.995, overDecay: 0.995, jump: 1 };
 
 // Read the buttons and turn them into velocity, jumps and drops.
@@ -99,7 +100,9 @@ export function controlPlayer(state, p) {
   if (coat && coat.owner !== p.seat) blame(state, p, coat.owner, coat.coat);
   const mods = p.surface === "glue" ? GLUE : p.surface === "oil" ? OIL : PLAIN;
 
-  if (p.drill !== 0) return; // the drill takes over (src/characters.js)
+  // The drill takes over (src/characters.js); an air jump cancels the dive.
+  if (p.drill === -1 && pressed & BTN.UP && p.jumpsLeft > 0 && !p.ground) p.drill = 0;
+  if (p.drill !== 0) return;
 
   const dir = (btn & BTN.RIGHT ? 1 : 0) - (btn & BTN.LEFT ? 1 : 0);
   if (dir !== 0) p.facing = dir;
@@ -111,7 +114,9 @@ export function controlPlayer(state, p) {
     p.vx += dir * accel;
     if (p.vx * dir > max) p.vx = dir * max;
   } else if (dir === 0) {
-    p.vx *= grounded ? mods.friction : PLAYER.airDrag;
+    // Wind (a gust or a gale) makes footing slippery: it can blow you along.
+    const friction = p.windTicks > 0 ? Math.max(mods.friction, 0.93) : mods.friction;
+    p.vx *= grounded ? friction : PLAYER.airDrag;
     if (Math.abs(p.vx) < 0.05) p.vx = 0;
   }
   if (speed > max) {
@@ -301,6 +306,7 @@ export function tickPlayer(state, p) {
   if (p.slow > 0) p.slow--;
   if (p.invuln > 0) p.invuln--;
   if (p.noContact > 0) p.noContact--;
+  if (p.windTicks > 0) p.windTicks--;
   if (p.action > 0) p.action--;
   for (let i = 0; i < 3; i++) if (p.cd[i] > 0) p.cd[i]--;
   if (!p.ground) p.stats.airTicks++;
