@@ -6,7 +6,7 @@
 import { BTN, MOVE_BUTTONS } from "./input.js";
 import { addEvent, overlaps } from "./common.js";
 import { addTempTile, getTile, isSolid, breakTile, damageTile, stressTile } from "./tiles.js";
-import { OBJ, addObject, limitOwned, springLaunchSelf } from "./objects.js";
+import { OBJ, addObject, limitOwned, springLaunchSelf, bumperBounce } from "./objects.js";
 
 // Throw velocity: neutral, forward held (far), up held (high lob).
 export function lobVelocity(p, btn = p.btn) {
@@ -193,7 +193,7 @@ export function updateDrill(state, p) {
     }
     for (const t of state.tiles) {
       if (t.y !== top || t.kind !== "crumble" || !isSolid(t)) continue;
-      if (Math.abs(t.x + t.w / 2 - x) < 140) stressTile(state, t, 0.4, p.seat);
+      if (Math.abs(t.x + t.w / 2 - x) < 140) stressTile(state, t, 0.4, p.seat, "drill");
     }
   } else if (p.ground.kind === "obj") {
     const w = state.objects.find((o) => o.id === p.ground.id);
@@ -204,7 +204,7 @@ export function updateDrill(state, p) {
   p.vy = -9;
   p.ground = null;
   p.supportTiles = [];
-  p.jumpsLeft = 1;
+  p.jumpsLeft = p.airJumps;
 }
 
 // ---- Glim ---------------------------------------------------------------
@@ -218,6 +218,13 @@ const castAcid = (state, p) => throwLob(state, p, "acid");
 function castBumper(state, p) {
   limitOwned(state, p.seat, (o) => o.type === "bumper", OBJ.bumper.max);
   const b = OBJ.bumper;
+  if (!p.ground && p.vy > 0) {
+    // Falling: the bumper appears underfoot, armed, and bounces Fuse up.
+    const bump = addObject(state, { type: "bumper", owner: p.seat, x: p.x + p.w / 2, y: p.y + p.h + b.r - 6, r: b.r, uses: b.uses, life: b.life, armed: 0, cool: [0, 0, 0, 0] });
+    bumperBounce(state, bump, p);
+    addEvent(state, { type: "place", obj: "bumper", seat: p.seat, x: bump.x, y: bump.y });
+    return true;
+  }
   const x = p.x + p.w / 2 + p.facing * 58;
   const y = p.y + p.h / 2 - 6;
   addObject(state, { type: "bumper", owner: p.seat, x, y, r: b.r, uses: b.uses, life: b.life, armed: b.arm, cool: [0, 0, 0, 0] });
@@ -251,6 +258,7 @@ export const CHARACTERS = {
     id: "mason",
     name: "Mason",
     title: "the builder",
+    trait: "Builds his own footing: the Ledge.",
     blurb: "Walls that block and bounce, a ledge to stand on, an anvil that punches through floors.",
     moves: [
       { name: "Wall", cd: 75, cast: castWall, desc: "A stone wall ahead. Blocks everyone, reflects comets and saws. 2 at once." },
@@ -262,6 +270,8 @@ export const CHARACTERS = {
     id: "glim",
     name: "Glim",
     title: "the alchemist",
+    airJumps: 2,
+    trait: "Light on her feet: two air jumps.",
     blurb: "Lobbed glue to pin you in place, oil to slide you off, acid to dissolve the floor.",
     moves: [
       { name: "Glue", cd: 140, cast: castGlue, desc: "A lobbed glob. Sticky patch: you crawl, hop low, and the tile crumbles under you." },
@@ -273,10 +283,11 @@ export const CHARACTERS = {
     id: "pip",
     name: "Pip",
     title: "the acrobat",
+    trait: "A Spring placed in the air launches Pip (instead of the air jump).",
     blurb: "Springs that launch whoever steps on them, a fan that blows, a drill that dives through the floor.",
     moves: [
       { name: "Spring", cd: 110, cast: castSpring, desc: "A spring pad ahead (hold a direction to angle it). In the air it launches you." },
-      { name: "Gust", cd: 420, cast: castGust, desc: "A fan that blows everything ahead of it for 3.5 seconds." },
+      { name: "Gust", cd: 480, cast: castGust, desc: "A fan that blows everything ahead of it for 3.5 seconds." },
       { name: "Drill", cd: 270, cast: castDrill, desc: "Dive straight down: the floor you land on breaks, nearby tiles shake." },
     ],
   },
@@ -284,6 +295,7 @@ export const CHARACTERS = {
     id: "fuse",
     name: "Fuse",
     title: "the demolitionist",
+    trait: "A Bumper placed while falling appears underfoot and bounces Fuse up.",
     blurb: "Bumpers that bounce, a sticky charge on a fuse, a saw that cuts along the floor.",
     moves: [
       { name: "Bumper", cd: 130, cast: castBumper, desc: "A floating bumper ahead. Bounces anyone who touches it. Arms in half a second." },

@@ -79,7 +79,7 @@ function placeOnHalo(state, p, sp, life) {
   p.ground = { kind: "tile", id: halo.id };
   p.groundTop = halo.y;
   p.supportTiles = [halo.id];
-  p.jumpsLeft = 1;
+  p.jumpsLeft = p.airJumps;
   p.drill = 0;
   p.blame = null;
   p.launched = 0;
@@ -264,8 +264,8 @@ function updatePressure(state) {
     const level = 1 + Math.floor((t - MATCH.overtimeAt) / MATCH.overtimeStep);
     if (level !== state.overtime) {
       state.overtime = level;
-      state.respawnMult = 1 + 0.6 * level;
-      state.hazardMult = Math.max(0.35, 1 - 0.2 * level);
+      state.respawnMult = 1 + 0.5 * level;
+      state.hazardMult = Math.max(0.4, 1 - 0.15 * level);
       addEvent(state, { type: "overtime", level });
     }
   }
