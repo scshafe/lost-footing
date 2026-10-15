@@ -1,0 +1,290 @@
+# Lost Footing: design
+
+The owner's brief ([brief.md](brief.md)) is fixed. This document is the design
+that follows from it, with the numbers the code uses. Numbers live in
+`src/constants.js` (physics, platforms, match rules), `src/characters.js`
+(moves), `src/stages.js` (layouts, hazard rhythms) and `src/bot.js` (bots);
+change them there and here together.
+
+## The idea in one line
+
+Nobody can touch anybody. You win by making the ground under the others
+disappear: break it, coat it, wall it off, or steer a hazard across it, while
+you keep moving so your own ground holds.
+
+## Contents
+
+- [Core rules](#core-rules)
+- [Crumble platforms](#crumble-platform)
+- [Sturdy platforms](#sturdy-platform)
+- [Movement](#movement)
+- [Vertical contact](#vertical-contact)
+- [Placeables and moves](#placeable)
+- [Characters](#characters)
+- [Stages and hazards](#stage-hazard)
+- [Blast zones, stocks and credit](#blast-zone)
+- [Overtime and collapse](#overtime)
+- [Controls](#controls)
+- [Bots](#bots)
+- [Simulation and determinism](#simulation)
+- [Presentation](#presentation)
+- [Ideas not yet built](#ideas)
+
+## Core rules
+
+- **No direct damage.** No move hits, damages or knocks back another player.
+  Moves place objects or break platforms; objects act on everyone who touches
+  them, the owner included.
+- **The stage eliminates.** Leaving a [blast zone](#blast-zone) (falling off
+  the bottom, flying off a side or the top) or touching a lethal hazard (the
+  tide) costs a stock.
+- **Credit is indirect.** When something you made (your glue, your spring,
+  your saw-cut tile, your stomp, a comet your wall bounced) affects a player
+  and they are eliminated within 5 seconds, you are credited.
+- Everyone starts with 3 stocks (1 to 5 in setup). Last player with stocks
+  wins.
+
+## Crumble platform
+
+<a id="crumble-platform"></a>
+Most of every stage is crumble platforms: rows of 48 x 18 px tiles in the
+Mario Bros style. Each tile carries **stress** from 0 to 1.
+
+| What | Stress per tick | Seconds to break |
+|---|---|---|
+| A player standing still (speed under 1.1 px/tick) | 1/50 | about 0.8 s |
+| A player moving on it | 1/170 | never, if you keep crossing tiles |
+| Nobody on it | -1/220 (decays) | |
+| Landing (hard landing at 10+ px/tick) | +0.06 (+0.12) once | |
+| Someone riding on your head | +60% of their load | |
+| Being stomped | +0.25 once | |
+
+- At stress 0.45 the tile starts **shaking** (telegraph). At 0.75 it is
+  **doomed**: it keeps gaining 1/80 per tick by itself, even if you leave.
+- At 1 it **falls** (40 ticks, not solid), is **gone** for 2.5 s, then
+  **flickers back** for 0.75 s (not solid) and is solid again with no stress.
+  A tile is back about 3.9 s after it broke.
+- Straddling two tiles splits your weight (each takes 75% of the rate), a small
+  reward for footwork.
+- All platforms are one-way: jump up through them, press down to drop
+  through.
+
+## Sturdy platform
+
+<a id="sturdy-platform"></a>
+Sturdy slabs (metal and stone, drawn differently) never crumble from standing.
+They have hit points (4, or 8 for the Quarry's great ledge). Moves and hazards
+damage them; at 0 they shatter, stay gone for 8 s, then come back whole. Every
+stage pairs its slabs with a hazard that crosses them on a rhythm, so a slab is
+a place to rest between dangers, never a place to camp.
+
+## Movement
+
+Units are pixels and ticks (60 per second). The world is 1600 x 900.
+
+| | |
+|---|---|
+| Run speed | 5.4, ground accel 0.9, friction 0.72 |
+| Air control | accel 0.45, drag 0.985 |
+| Gravity | 0.6, max fall 13; fast fall (hold down) 1.0, max 17 |
+| Jump | -13 (about 140 px high); air jump -11.2 (about 105 px), one per landing |
+| Short hop | releasing jump while rising faster than 5 cuts the rise |
+| Coyote time / jump buffer | 6 ticks each |
+| Body | 26 x 38 |
+
+Tier spacing on stages is 120 to 140 px: one jump reaches the next tier, the air
+jump is your recovery.
+
+## Vertical contact
+
+<a id="vertical-contact"></a>
+Players pass through each other side to side. Vertical contact (decided from
+last tick's positions: whoever was above is the upper body) matters:
+
+- **Stomp / bump.** If the upper body is closing at 4+ px/tick (falling onto
+  someone, or someone jumping up into your feet), the upper body bounces up
+  (3 + 0.4 x closing speed, max 9.5) and gets its air jump back. A grounded
+  lower body is slowed for 0.5 s and its tile takes +0.25 stress; an airborne
+  lower body is pushed down at 75% of the upper body's speed. A bump from below
+  stops the jumper's rise and pops the player above upward, even through a
+  one-way platform.
+- **Riding.** A gentle landing lets you ride on someone's head. You weigh down
+  their tile (+60% of your load) and they cannot jump through you without
+  bumping you off.
+- Both are credited contact: a stomp that sends someone into the pit is an
+  elimination for the stomper.
+
+## Placeable
+
+<a id="placeable"></a>
+A placeable is an object a move puts into the world. Every placeable affects
+every player who touches it, its owner included; most need a surface under
+them and fall when it breaks. Every move has a cooldown, and placeables have a
+lifetime and a limit on how many one player may have at once (placing past the
+limit removes your oldest). Objects arm briefly before they act (a bumper
+glows for half a second, a spring for a quarter), so nothing is an instant hit.
+
+Throws ("lobs") arc: a neutral throw goes 6.5 px/tick forward, holding forward
+throws far (9), holding up lobs high (4.5 forward, -10 up). Gusts push lobs in
+flight.
+
+Move keys are the same role for everyone:
+
+1. **Place**: the character's main obstacle.
+2. **Trick**: a second tool, often mobility or a combo piece.
+3. **Break**: platform destruction.
+
+## Characters
+
+<a id="characters"></a>
+
+| | Place (1) | Trick (2) | Break (3) |
+|---|---|---|---|
+| **Mason**, the builder | **Wall**: 22 x 90 stone wall ahead, solid on every side, 5.5 s, 2 at once, cd 1.25 s. Reflects comets and saws. | **Ledge**: a temporary sturdy slab under you (in the air) or ahead of you (on the ground), 4 s, cd 6 s. | **Anvil**: a thrown anvil that punches through up to 3 crumble tiles, or does 2 damage to a slab, cd 5 s. |
+| **Glim**, the alchemist | **Glue**: a lobbed glob; a 72 px sticky patch for 7 s (speed x0.18, jump x0.55; you count as standing still, so the tile crumbles). 2 at once, cd 2.3 s. | **Oil**: a lobbed slick; a 110 px patch for 7 s (almost no friction or traction, top speed x1.25). 2 at once, cd 2.3 s. | **Acid**: a lobbed flask; a 80 px puddle that dissolves the tiles under it in under a second and eats 1 slab hp per 0.8 s, 2.5 s, cd 5.5 s. |
+| **Pip**, the acrobat | **Spring**: a pad ahead of you (or under you in the air, launching you at once). Launches whoever lands on it up (-17), or diagonally if you held a direction when placing. 4 uses, 8 s, 2 at once, cd 1.8 s. | **Gust**: a fan that blows 360 px ahead for 3.5 s (0.42 px/tick² at the fan, half at the far end). 1 at once, cd 7 s. | **Drill**: dive straight down (hop first if grounded); the tiles you land on break, neighbours within 140 px take +0.4 stress, slabs take 2 damage; you bounce up. cd 4.5 s. |
+| **Fuse**, the demolitionist | **Bumper**: a floating bumper ahead that bounces anyone who touches it away at 10 px/tick. Arms in 0.5 s, 4 bounces, 7 s, 2 at once, cd 2.2 s. | **Charge**: a lobbed sticky charge; after 1.7 s of beeping it breaks every tile within 100 px, does 2 damage to slabs and destroys placeables, cd 5 s. | **Saw**: a blade that rolls along surfaces at 7 px/tick for 2.2 s, dooming every crumble tile it crosses and chipping slabs; drops to lower tiers. cd 4.5 s. |
+
+Interactions that are built in (the combination space is the point):
+
+- **Glue on crumble = a trap.** Glue makes you "still", so the tile under you
+  crumbles at the still rate.
+- **Oil + gust / oil + slope of momentum**: slick patches carry you off edges.
+- **Walls and bumpers reflect comets and saws**; a reflected comet is credited
+  to the wall's or bumper's owner (steering a hazard).
+- **Springs launch everything**: players, anvils, saws (a saw can hop a tier).
+- **Gusts push lobs, saws and comets**, and push players everywhere in the box.
+- **Charges destroy placeables** (break a wall, pop a spring).
+- **Glue slows saws, oil speeds them up.**
+- **Stomps stress tiles**; riding someone weighs down their tile.
+- **Walls pin**: pressing into a wall keeps you "still", so your tile crumbles.
+
+## Stages and hazards
+
+<a id="stage-hazard"></a>
+Four stages, each 1600 x 900, with crumble rows on tiers 120 to 140 px apart.
+
+| Stage | Layout | Hazard rhythm |
+|---|---|---|
+| **Crumble Yard** | Five tiers, three sturdy slabs (two side, one centre-high). | **Comets** every 7 to 10 s skim the sturdy tiers (lanes at y 650 and 390), 1.5 s lane warning. |
+| **The Quarry** | A great 400 px stone ledge (8 hp) mid-stage, two high slabs, crumble rows around. | **Rockfall** every 3.3 to 5.3 s: a shadow marks a column for 1.3 s, then a boulder drops, pushing players down and smashing the first platform it hits (2 slab hp). 60% of rocks aim at a sturdy slab. |
+| **Tide Pools** | Three sturdy islands at the bottom, crumble tiers above. | **Tide** every 13 to 16 s: a 2 s warning, then the water rises over the islands for 4 s (lethal) and recedes. Small comets cross the middle tier. |
+| **Gale Bridge** | One 25-tile bridge across the stage, two high slabs, a low slab under the middle. | **Gales** every 10 to 13 s: a 1.7 s warning, then 3.3 s of wind (0.34 px/tick²) from one side. Comets cross the high slabs. |
+
+Hazards have no owner: an elimination by a hazard is credited to whoever last
+affected the player (including whoever reflected the comet).
+
+## Blast zones, stocks and credit
+
+<a id="blast-zone"></a>
+The blast zones are the edges of the world plus a margin: x < -260, x > 1860,
+y > 1040 (below the screen), y < -420 (far above). Crossing one, or touching
+the tide, eliminates. The eliminated player loses a stock and after 1.5 s
+respawns on a **halo**: a personal floating platform at the spawn point farthest
+from the others, which vanishes as soon as you step off it (or after 3 s).
+Respawned players are untouchable by hazards and contact for 2 s.
+
+**Credit**: every indirect effect records "who did this to me". An elimination
+within 5 s of such an effect is credited to that player; otherwise it is a
+self-elimination ("fell"). If the last players are eliminated on the same tick,
+the tie is broken by credited eliminations, then fewer self-eliminations, then
+platforms broken, then seat order.
+
+## Overtime
+
+<a id="overtime"></a>
+Every match ends. From 2:30 of play, **overtime**: every 30 s, platforms take
+60% longer to come back and hazards come 20% more often (to a floor of 35% of
+the normal gap). From 4:00, **collapse**: nothing broken comes back, a random
+crumble tile is doomed every 0.5 s and every sturdy slab loses 1 hp every 2 s.
+The stage is gone within about a minute.
+
+## Controls
+
+Four key clusters on one keyboard, chosen so each fits one hand, avoids
+browser-reserved keys (no Ctrl, Alt, Tab or function keys: Ctrl+W would close
+the tab), and keeps the same shape (jump in the middle, Place left of it,
+Trick and Break to the right):
+
+| Seat | Move / jump / drop | Place | Trick | Break |
+|---|---|---|---|---|
+| P1 | A D, W, S | Q | E | R |
+| P2 | ← →, ↑, ↓ | `.` (or Delete) | `/` (or End) | Right Shift (or Page Down) |
+| P3 | J L, I, K | U | O | P |
+| P4 | Numpad 4 6, 8, 5 (or 2) | Numpad 7 | Numpad 9 | Numpad + |
+
+Global: Esc pauses, M mutes, Enter confirms in menus. Any seat's cluster also
+drives the menus.
+
+**Ghosting.** Most keyboards cannot report every combination of three or more
+keys (it depends on the keyboard's wiring). The clusters sit in different
+regions of the keyboard to reduce clashes, and the Controls screen has a key
+tester that lights each seat's keys as they register, so players can check
+their keyboard before a match. Modifier keys (Right Shift) rarely ghost.
+
+## Bots
+
+<a id="bots"></a>
+Bots live in the simulation (`src/bot.js`) and read only the match state, with
+their own seeded generator, so a bot match is as deterministic as any other.
+Each tick a bot:
+
+1. **Picks footing.** Every few ticks (its reaction time) it scores the
+   surfaces it could reach: solid, low stress, not shaking, not coated, not in
+   a warned hazard lane, rock column or the tide, not in a charge radius,
+   preferring the middle of the stage and nearby ground. It heads for the best.
+2. **Moves.** Runs toward the target, jumps when the target is above, drops
+   when it is below, uses the air jump to recover, and paces back and forth
+   across tiles when it arrives so its ground holds.
+3. **Dodges.** Jumps over an incoming comet, leaves a rock's column, climbs
+   above the tide, leaves a gust box toward the stage.
+4. **Uses its kit.** For each ready move it checks whether it would hurt an
+   opponent: a lob that would land near an opponent's feet, a saw along an
+   opponent's row, a drill from above, a wall or bumper in an opponent's path,
+   a spring under a recovering opponent's landing spot, a gust that would push
+   someone toward an edge. Its own recovery tools (ledge, air spring) come out
+   when it is falling with nothing below.
+
+Three levels: **easy** (reacts in 0.4 s, rarely uses moves, misjudges throws),
+**normal** (0.2 s) and **hard** (0.08 s, aims well, uses moves whenever useful).
+
+## Simulation
+
+<a id="simulation"></a>
+- `src/` is the whole game rule set: no DOM, no rendering, no input devices.
+  `web/` imports it.
+- Fixed 60 Hz ticks. `step(state, inputs)` takes one button bitmask per seat
+  (left, right, up, down, place, trick, break) and advances one tick.
+- All randomness comes from seeded generators stored in the state (mulberry32:
+  one for the stage, one for bots). Nothing reads the clock or Math.random.
+  `hashState` fingerprints a state; the tests check that the same seed and
+  inputs give the same hash.
+- The state is plain JSON-able data, which leaves the door open to rollback or
+  lockstep online play later.
+- `state.events` lists what happened this tick (sounds, particles) for the
+  client; it is excluded from the hash.
+
+## Presentation
+
+- Fixed camera showing the whole stage, letterboxed to the window.
+  Off-screen players get an arrow at the screen edge in their colour.
+- Player colours are per seat (P1 red, P2 blue, P3 green, P4 gold); characters
+  differ in silhouette (Mason's hard hat, Glim's hood, Pip's antenna, Fuse's
+  goggles and spark).
+- Tiles jitter and redden as stress rises, crack when doomed, and fall
+  tumbling; respawning tiles flicker in outline. Hazard warnings are lane
+  stripes, shadows and edge arrows with a siren.
+- Synthesized sound (WebAudio, no files), mute with M.
+- KOs flash at the blast zone in the victim's colour, shake the screen and
+  post to a feed ("P1's glue → P3").
+- Results show placings and stats: eliminations credited, self-eliminations,
+  platforms broken, objects placed, stomps, time airborne, longest life.
+
+## Ideas not yet built
+
+- Online play (lockstep or rollback over the deterministic simulation).
+- Rebindable keys and gamepad support.
+- More characters: a magnet user (pulls placeables), a painter (fake platforms
+  that look solid), a gardener (vines that grow into ladders).
+- Moving stages (a sinking ship, a conveyor sky).
+- Team mode and handicaps; replays from recorded inputs.
