@@ -141,8 +141,8 @@ Move keys are the same role for everyone:
 | | Place (1) | Trick (2) | Break (3) |
 |---|---|---|---|
 | **Mason**, the builder | **Wall**: 22 x 90 stone wall ahead, solid on every side, 5.5 s, 2 at once, cd 1.25 s. Reflects comets and saws. | **Ledge**: a temporary sturdy slab under you (in the air) or ahead of you (on the ground), 4 s, cd 6 s. | **Anvil**: a thrown anvil that punches through up to 3 crumble tiles, or does 2 damage to a slab, cd 5 s. |
-| **Glim**, the alchemist | **Glue**: a lobbed glob; a 72 px sticky patch for 7 s (speed x0.18, jump x0.55; you count as standing still, so the tile crumbles). 2 at once, cd 2.3 s. | **Oil**: a lobbed slick; a 110 px patch for 7 s (almost no friction or traction, top speed x1.25). 2 at once, cd 2.3 s. | **Acid**: a lobbed flask; a 80 px puddle that dissolves the tiles under it in under a second and eats 1 slab hp per 0.8 s, 2.5 s, cd 5.5 s. |
-| **Pip**, the acrobat | **Spring**: a pad ahead of you (or under you in the air, launching you at once). Launches whoever lands on it up (-17), or diagonally if you held a direction when placing. 4 uses, 8 s, 2 at once, cd 1.8 s. | **Gust**: a fan that blows 360 px ahead for 3.5 s (0.42 px/tick² at the fan, half at the far end). 1 at once, cd 7 s. | **Drill**: dive straight down (hop first if grounded); the tiles you land on break, neighbours within 140 px take +0.4 stress, slabs take 2 damage; you bounce up. cd 4.5 s. |
+| **Glim**, the alchemist | **Glue**: a lobbed glob; a 72 px sticky patch for 7 s (speed x0.1, jump x0.55; you count as standing still, so the tile crumbles). 2 at once, cd 2.3 s. | **Oil**: a lobbed slick; a 110 px patch for 7 s (almost no friction or traction, top speed x1.25). 2 at once, cd 2.3 s. | **Acid**: a lobbed flask; a 80 px puddle that dissolves the tiles under it in under a second and eats 1 slab hp per 0.8 s, 2.5 s, cd 5.5 s. |
+| **Pip**, the acrobat | **Spring**: a pad ahead of you (or under you in the air, launching you at once). Launches whoever lands on it up (-17), or diagonally if you held a direction when placing. 4 uses, 8 s, 2 at once, cd 1.8 s. | **Gust**: a fan that blows 360 px ahead for 3.5 s (0.42 px/tick² at the fan, half at the far end). 1 at once, cd 7 s. | **Drill**: dive straight down (hop first if grounded); the tiles you land on break, neighbours within 140 px take +0.4 stress, slabs take 2 damage; you bounce up. An air jump cancels the dive. cd 4.5 s. |
 | **Fuse**, the demolitionist | **Bumper**: a floating bumper ahead that bounces anyone who touches it away at 10 px/tick. Arms in 0.5 s, 4 bounces, 7 s, 2 at once, cd 2.2 s. | **Charge**: a lobbed sticky charge; after 1.7 s of beeping it breaks every tile within 100 px, does 2 damage to slabs and destroys placeables, cd 5 s. | **Saw**: a blade that rolls along surfaces at 7 px/tick for 2.2 s, dooming every crumble tile it crosses and chipping slabs; drops to lower tiers. cd 4.5 s. |
 
 Interactions that are built in (the combination space is the point):
@@ -154,6 +154,8 @@ Interactions that are built in (the combination space is the point):
   to the wall's or bumper's owner (steering a hazard).
 - **Springs launch everything**: players, anvils, saws (a saw can hop a tier).
 - **Gusts push lobs, saws and comets**, and push players everywhere in the box.
+  Wind (a gust or a gale) makes footing slippery: a player who stops pushing
+  against it is blown along the ground.
 - **Charges destroy placeables** (break a wall, pop a spring).
 - **Glue slows saws, oil speeds them up.**
 - **Stomps stress tiles**; riding someone weighs down their tile.
