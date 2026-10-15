@@ -3,7 +3,8 @@
 // its events and never changes them.
 
 import { stageById } from "../src/stages.js";
-import { CHARACTERS } from "../src/characters.js";
+import { CHARACTERS, lobVelocity, lobOrigin } from "../src/characters.js";
+import { predictLob } from "../src/objects.js";
 import { CRUMBLE, MATCH, WORLD } from "../src/constants.js";
 import { shortLabel } from "./keys.js";
 
@@ -165,7 +166,7 @@ export class Renderer {
           this.banner(String(e.n), "#ffffff", 50, 150);
           break;
         case "go":
-          this.banner("GO!", "#ffe27a", 50, 170);
+          this.banner("GO!", "#ffe27a", 70, 170, "Keep moving: still feet crumble the floor");
           break;
         case "overtime":
           this.banner("OVERTIME", "#ff9f43", 90, 90, "Platforms come back slower; hazards come faster");
@@ -712,7 +713,43 @@ export class Renderer {
   }
 
   drawPlayers(state) {
+    for (const p of state.players) if (p.status === "play" && p.kind === "human") this.drawAim(p, state);
     for (const p of state.players) if (p.status === "play") this.drawPlayer(p, state);
+  }
+
+  // A faint arc and landing mark for a human's ready lobbed move.
+  drawAim(p, state) {
+    const lobSlots = { glim: [0, 1, 2], fuse: [1] }[p.character];
+    if (!lobSlots || !lobSlots.some((k) => p.cd[k] === 0) || p.drill !== 0) return;
+    const { ctx } = this;
+    const v = lobVelocity(p, p.btn);
+    const o = lobOrigin(p);
+    const land = predictLob(state, o.x, o.y, v.vx, v.vy, 120);
+    ctx.fillStyle = this.col(p.seat);
+    ctx.globalAlpha = 0.35;
+    let x = o.x;
+    let y = o.y;
+    let vx = v.vx;
+    let vy = v.vy;
+    for (let i = 0; i < 90; i++) {
+      vy += 0.45;
+      x += vx;
+      y += vy;
+      if (land && ((vx > 0 && x > land.x) || (vx < 0 && x < land.x))) break;
+      if (i % 3 === 0) ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+    }
+    if (land) {
+      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = this.col(p.seat);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(land.x - 6, land.y - 6);
+      ctx.lineTo(land.x + 6, land.y + 6);
+      ctx.moveTo(land.x + 6, land.y - 6);
+      ctx.lineTo(land.x - 6, land.y + 6);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   drawPlayer(p, state) {
