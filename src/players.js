@@ -24,9 +24,10 @@ export function newStats() {
   };
 }
 
-export function newPlayer(seat, { kind = "human", character = "mason", difficulty = "normal" } = {}, stocks = 3) {
+export function newPlayer(seat, { kind = "human", character = "mason", difficulty = "normal", slot } = {}, stocks = 3) {
   return {
     seat,
+    slot: slot ?? seat, // the physical seat (colour, keys) when seats are skipped
     kind,
     character,
     difficulty,

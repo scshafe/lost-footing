@@ -287,7 +287,7 @@ export const CHARACTERS = {
     blurb: "Springs that launch whoever steps on them, a fan that blows, a drill that dives through the floor.",
     moves: [
       { name: "Spring", cd: 110, cast: castSpring, desc: "A spring pad ahead (hold a direction to angle it). In the air it launches you." },
-      { name: "Gust", cd: 480, cast: castGust, desc: "A fan that blows everything ahead of it for 3.5 seconds." },
+      { name: "Gust", cd: 480, cast: castGust, desc: "A fan that blows everything ahead of it for 3 seconds. Footing in the wind turns slippery." },
       { name: "Drill", cd: 270, cast: castDrill, desc: "Dive straight down: the floor you land on breaks, nearby tiles shake." },
     ],
   },

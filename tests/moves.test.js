@@ -333,6 +333,7 @@ test("combinations: glue slows a saw, a spring launches it, a charge clears plac
   step(s3, []);
   m.facing = -1;
   cast(s3, 0, 0, 1); // Mason walls right next to it
+  m.status = "dead"; // and steps away, so his weight doesn't crumble the wall's tile
   assert.equal(objs(s3, "wall").length, 1);
   run(s3, OBJ.charge.fuse);
   assert.equal(objs(s3, "wall").length, 0, "the blast cleared the wall");
