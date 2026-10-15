@@ -28,5 +28,5 @@ How a change lands:
 
 The project's agent may merge its own PR and push `main`; there is no approval gate.
 
-Central concepts are defined in VOCABULARY.toml; refer to them as `lost-footing:<slug>`, and add a term with `dev vocab add` when you introduce one.
+Central concepts are defined in VOCABULARY.toml; refer to them as `lost-footing:<slug>` (e.g. `lost-footing:crumble-platform`), and add a term with `dev vocab add` when you introduce one.
 <!-- scshafe-dev:end landing -->

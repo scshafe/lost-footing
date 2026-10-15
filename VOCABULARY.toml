@@ -11,3 +11,89 @@ schema = 1
 # """
 # refs = ["docs/design.md#managed-section"] # optional: repo-relative paths, #anchor optional; must exist
 # aliases = ["marker block"]                # optional: search words (not slugs, never another term's slug)
+
+[[term]]
+slug = "crumble-platform"
+title = "Crumble platform"
+definition = """
+The stage's main ground: rows of tiles that gain stress while someone stands on
+them (fast when still, slowly when moving), shake, fall and respawn a few
+seconds later. Not a sturdy platform, which never crumbles from standing.
+"""
+refs = ["docs/design.md#crumble-platform"]
+aliases = ["crumble tile", "tile"]
+
+[[term]]
+slug = "sturdy-platform"
+title = "Sturdy platform"
+definition = """
+A slab with hit points that never crumbles from standing; only moves and stage
+hazards break it, and it comes back whole after a longer wait. Every stage
+crosses its sturdy platforms with a hazard on a rhythm.
+"""
+refs = ["docs/design.md#sturdy-platform"]
+aliases = ["slab"]
+
+[[term]]
+slug = "placeable"
+title = "Placeable"
+definition = """
+An object a character's move puts into the world (wall, ledge, glue, oil, acid,
+spring, gust, bumper, charge, saw, anvil). It acts on every player who touches
+it, its owner included, and never damages or hits anyone directly.
+"""
+refs = ["docs/design.md#placeable"]
+aliases = ["object", "obstacle"]
+
+[[term]]
+slug = "blast-zone"
+title = "Blast zone"
+definition = """
+The bounds beyond the world's edges; crossing one (or touching a lethal hazard
+such as the tide) eliminates a player and costs a stock. The only way anyone is
+eliminated.
+"""
+refs = ["docs/design.md#blast-zone"]
+aliases = ["kill zone", "pit"]
+
+[[term]]
+slug = "stage-hazard"
+title = "Stage hazard"
+definition = """
+Something the stage does on a rhythm, with a warning: comets, rockfall, the
+tide, gales. Hazards are what make sturdy platforms dangerous; they have no
+owner, but a player who steers one (reflects a comet) is credited.
+"""
+refs = ["docs/design.md#stage-hazard"]
+aliases = ["hazard", "comet", "rockfall", "tide", "gale"]
+
+[[term]]
+slug = "vertical-contact"
+title = "Vertical contact"
+definition = """
+The only body contact: landing on someone (stomp) or jumping into their feet
+(bump) exchanges vertical speed, and a gentle landing rides on their head.
+Bodies pass through each other side to side.
+"""
+refs = ["docs/design.md#vertical-contact"]
+aliases = ["stomp", "bump", "riding"]
+
+[[term]]
+slug = "credit"
+title = "Elimination credit"
+definition = """
+An elimination within five seconds of an indirect effect (your placeable, your
+broken tile, your stomp, a comet you reflected) is credited to you; otherwise
+it is a self-elimination. Credit is how indirect play is scored.
+"""
+refs = ["docs/design.md#blast-zone"]
+aliases = ["blame", "KO credit"]
+
+[[term]]
+slug = "halo"
+title = "Respawn halo"
+definition = """
+The personal floating platform a player respawns on. Only its owner can stand
+on it, and it vanishes when they step off or after three seconds.
+"""
+refs = ["docs/design.md#blast-zone"]
