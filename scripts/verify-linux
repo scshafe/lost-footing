@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# The repository's one verify command (dev.toml [verify]): syntax-check every
+# module, then run the Node test suite.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+command -v node >/dev/null || { echo "verify-linux: needs Node.js 24" >&2; exit 1; }
+
+mapfile -t modules < <(git ls-files --cached --others --exclude-standard -- '*.js' '*.mjs')
+for module in "${modules[@]}"; do
+  node --check "$module"
+done
+
+mapfile -t tests < <(git ls-files --cached --others --exclude-standard -- 'tests/*.test.js')
+if ((${#tests[@]})); then
+  node --test "${tests[@]}"
+else
+  echo "verify-linux: no tests yet"
+fi

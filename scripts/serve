@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Serve the game on http://localhost:${PORT:-8080} (the repository root, so
+# web/ can import src/).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+echo "Lost Footing: http://localhost:${PORT:-8080}/web/"
+exec python3 -m http.server "${PORT:-8080}" --bind 127.0.0.1
