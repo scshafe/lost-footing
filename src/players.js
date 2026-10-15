@@ -6,6 +6,7 @@ import { PLAYER, CRUMBLE } from "./constants.js";
 import { BTN } from "./input.js";
 import { addEvent, blame } from "./common.js";
 import { getTile } from "./tiles.js";
+import { CHARACTERS } from "./characters.js";
 
 export function newStats() {
   return {
@@ -42,6 +43,7 @@ export function newPlayer(seat, { kind = "human", character = "mason", difficult
     wasGrounded: false,
     coyote: 0,
     jumpsLeft: 1,
+    airJumps: (CHARACTERS[character] && CHARACTERS[character].airJumps) || 1,
     jumpBuffer: 0,
     jumpHeld: false,
     dropTimer: 0,
@@ -115,7 +117,7 @@ export function controlPlayer(state, p) {
     if (p.vx * dir > max) p.vx = dir * max;
   } else if (dir === 0) {
     // Wind (a gust or a gale) makes footing slippery: it can blow you along.
-    const friction = p.windTicks > 0 ? Math.max(mods.friction, 0.93) : mods.friction;
+    const friction = p.windTicks > 0 ? Math.max(mods.friction, 0.9) : mods.friction;
     p.vx *= grounded ? friction : PLAYER.airDrag;
     if (Math.abs(p.vx) < 0.05) p.vx = 0;
   }
@@ -260,7 +262,7 @@ export function movePlayer(state, p, surfs, walls) {
 }
 
 function land(state, p, impact) {
-  p.jumpsLeft = 1;
+  p.jumpsLeft = p.airJumps;
   p.launched = 0;
   p.fastFall = false;
   if (p.drill !== 0) return; // the drill handles its own landing

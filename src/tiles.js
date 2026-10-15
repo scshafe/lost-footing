@@ -34,6 +34,7 @@ export function addTempTile(state, { kind, x, y, w, h, owner, life, hp = 1 }) {
     maxHp: hp,
     stressBy: -1,
     stressAt: -9999,
+    stressCause: "",
     owner,
     life,
     age: 0,
@@ -44,14 +45,15 @@ export function addTempTile(state, { kind, x, y, w, h, owner, life, hp = 1 }) {
 
 // Add stress to a crumble tile on behalf of a player's move (by >= 0) or the
 // stage (by = -1). A sturdy slab ignores stress.
-export function stressTile(state, tile, amount, by) {
+export function stressTile(state, tile, amount, by, cause = "crumble") {
   if (!isSolid(tile) || tile.kind !== "crumble") return;
   tile.stress = Math.min(1, tile.stress + amount);
   if (by >= 0) {
     tile.stressBy = by;
     tile.stressAt = state.tick;
+    tile.stressCause = cause;
   }
-  if (tile.stress >= 1) breakTile(state, tile, by >= 0 ? by : creditFor(state, tile));
+  if (tile.stress >= 1) breakTile(state, tile, by >= 0 ? by : creditFor(state, tile), tile.stressCause || cause);
 }
 
 // Damage a sturdy slab or a temporary tile; a crumble tile breaks outright.
@@ -113,7 +115,7 @@ export function updateTiles(state) {
           } else if (tile.stress < CRUMBLE.shakeAt) {
             tile.shaking = false;
           }
-          if (tile.stress >= 1) breakTile(state, tile, creditFor(state, tile), "crumble");
+          if (tile.stress >= 1) breakTile(state, tile, creditFor(state, tile), tile.stressCause || "crumble");
         } else if (tile.life >= 0) {
           tile.age++;
           tile.life--;

@@ -17,10 +17,10 @@ export const OBJ = Object.freeze({
   glue: { w: 72, life: 420, max: 2 },
   oil: { w: 110, life: 420, max: 2 },
   acid: { w: 80, life: 150, max: 1, stress: 1 / 40, slabEvery: 48 },
-  spring: { w: 34, h: 12, life: 480, max: 2, uses: 4, arm: 15, launch: -17, angledLaunch: -15, angledVx: 8 },
-  gust: { len: 360, hh: 60, force: 0.42, life: 210, arm: 20 },
-  bumper: { r: 22, life: 420, max: 2, uses: 4, arm: 30, speed: 10 },
-  charge: { r: 8, fuse: 100, radius: 100, max: 1 },
+  spring: { w: 34, h: 12, life: 480, max: 2, uses: 4, arm: 15, launch: -17, angledLaunch: -15, angledVx: 8, selfLaunch: -13.5 },
+  gust: { len: 340, hh: 60, force: 0.27, life: 180, arm: 24 },
+  bumper: { r: 22, life: 420, max: 2, uses: 4, arm: 30, speed: 11.5 },
+  charge: { r: 8, fuse: 100, radius: 115, max: 1 },
   saw: { r: 14, speed: 7, life: 130 },
 });
 
@@ -221,14 +221,14 @@ export function explode(state, o, cx, cy) {
 }
 
 // Launch a player off a spring.
-function launchFromSpring(state, s, p) {
-  p.vy = s.angle ? OBJ.spring.angledLaunch : OBJ.spring.launch;
+function launchFromSpring(state, s, p, self = false) {
+  p.vy = self ? OBJ.spring.selfLaunch : s.angle ? OBJ.spring.angledLaunch : OBJ.spring.launch;
   if (s.angle) p.vx = s.angle * OBJ.spring.angledVx;
   p.y = s.y - p.h - 1;
   p.ground = null;
   p.supportTiles = [];
   p.launched = PLAYER.launchedTicks;
-  p.jumpsLeft = 1;
+  p.jumpsLeft = p.airJumps;
   p.jumpHeld = false;
   p.drill = 0;
   s.uses--;
@@ -239,10 +239,11 @@ function launchFromSpring(state, s, p) {
 }
 
 export function springLaunchSelf(state, s, p) {
-  launchFromSpring(state, s, p);
+  launchFromSpring(state, s, p, true);
+  p.jumpsLeft = 0; // the air spring replaces the air jump
 }
 
-function bounceOffBumper(state, b, p) {
+export function bumperBounce(state, b, p) {
   const px = p.x + p.w / 2;
   const py = p.y + p.h / 2;
   let dx = px - b.x;
@@ -306,7 +307,7 @@ export function updateObjects(state) {
         if (o.armed > 0 || o.dead) break;
         for (const p of players) {
           if (p.invuln > 0 || (o.cool[p.seat] || 0) > state.tick) continue;
-          if (circleBox(o.x, o.y, o.r, p.x, p.y, p.w, p.h)) bounceOffBumper(state, o, p);
+          if (circleBox(o.x, o.y, o.r, p.x, p.y, p.w, p.h)) bumperBounce(state, o, p);
           if (o.dead) break;
         }
         break;
@@ -321,7 +322,7 @@ export function updateObjects(state) {
           o.tick++;
           for (const id of o.supports) {
             const t = getTile(state, id);
-            if (t.kind === "crumble") stressTile(state, t, OBJ.acid.stress, o.owner);
+            if (t.kind === "crumble") stressTile(state, t, OBJ.acid.stress, o.owner, "acid");
             else if (o.tick % OBJ.acid.slabEvery === 0) damageTile(state, t, 1, o.owner, "acid");
           }
         }
@@ -533,6 +534,7 @@ function updateSaw(state, o, surfs) {
           t.stress = 0.8;
           t.stressBy = o.owner;
           t.stressAt = state.tick;
+          t.stressCause = "saw";
           addEvent(state, { type: "cut", x: o.x, y: t.y });
         }
       } else if (!o.hit.includes(t.id)) {

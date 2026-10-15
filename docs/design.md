@@ -53,17 +53,17 @@ Mario Bros style. Each tile carries **stress** from 0 to 1.
 | What | Stress per tick | Seconds to break |
 |---|---|---|
 | A player standing still (speed under 1.1 px/tick) | 1/50 | about 0.8 s |
-| A player moving on it | 1/170 | never, if you keep crossing tiles |
-| Nobody on it | -1/220 (decays) | |
+| A player moving on it | 1/110 | about 3 s of pacing on the same tiles; never if you keep travelling |
+| Nobody on it | -1/260 (decays) | |
 | Landing (hard landing at 10+ px/tick) | +0.06 (+0.12) once | |
 | Someone riding on your head | +60% of their load | |
 | Being stomped | +0.25 once | |
 
 - At stress 0.45 the tile starts **shaking** (telegraph). At 0.75 it is
   **doomed**: it keeps gaining 1/80 per tick by itself, even if you leave.
-- At 1 it **falls** (40 ticks, not solid), is **gone** for 2.5 s, then
+- At 1 it **falls** (40 ticks, not solid), is **gone** for 3.3 s, then
   **flickers back** for 0.75 s (not solid) and is solid again with no stress.
-  A tile is back about 3.9 s after it broke.
+  A tile is back about 4.75 s after it broke (longer in overtime).
 - Straddling two tiles splits your weight (each takes 75% of the rate), a small
   reward for footwork.
 - All platforms are one-way: jump up through them, press down to drop
@@ -140,10 +140,10 @@ Move keys are the same role for everyone:
 
 | | Place (1) | Trick (2) | Break (3) |
 |---|---|---|---|
-| **Mason**, the builder | **Wall**: 22 x 90 stone wall ahead, solid on every side, 5.5 s, 2 at once, cd 1.25 s. Reflects comets and saws. | **Ledge**: a temporary sturdy slab under you (in the air) or ahead of you (on the ground), 4 s, cd 6 s. | **Anvil**: a thrown anvil that punches through up to 3 crumble tiles, or does 2 damage to a slab, cd 5 s. |
-| **Glim**, the alchemist | **Glue**: a lobbed glob; a 72 px sticky patch for 7 s (speed x0.1, jump x0.55; you count as standing still, so the tile crumbles). 2 at once, cd 2.3 s. | **Oil**: a lobbed slick; a 110 px patch for 7 s (almost no friction or traction, top speed x1.25). 2 at once, cd 2.3 s. | **Acid**: a lobbed flask; a 80 px puddle that dissolves the tiles under it in under a second and eats 1 slab hp per 0.8 s, 2.5 s, cd 5.5 s. |
-| **Pip**, the acrobat | **Spring**: a pad ahead of you (or under you in the air, launching you at once). Launches whoever lands on it up (-17), or diagonally if you held a direction when placing. 4 uses, 8 s, 2 at once, cd 1.8 s. | **Gust**: a fan that blows 360 px ahead for 3.5 s (0.42 px/tick² at the fan, half at the far end). 1 at once, cd 7 s. | **Drill**: dive straight down (hop first if grounded); the tiles you land on break, neighbours within 140 px take +0.4 stress, slabs take 2 damage; you bounce up. An air jump cancels the dive. cd 4.5 s. |
-| **Fuse**, the demolitionist | **Bumper**: a floating bumper ahead that bounces anyone who touches it away at 10 px/tick. Arms in 0.5 s, 4 bounces, 7 s, 2 at once, cd 2.2 s. | **Charge**: a lobbed sticky charge; after 1.7 s of beeping it breaks every tile within 100 px, does 2 damage to slabs and destroys placeables, cd 5 s. | **Saw**: a blade that rolls along surfaces at 7 px/tick for 2.2 s, dooming every crumble tile it crosses and chipping slabs; drops to lower tiers. cd 4.5 s. |
+| **Mason**, the builder (builds his own footing) | **Wall**: 22 x 90 stone wall ahead, solid on every side, 5.5 s, 2 at once, cd 1.25 s. Reflects comets and saws. | **Ledge**: a temporary sturdy slab under you (in the air) or ahead of you (on the ground), 4 s, cd 6 s. | **Anvil**: a thrown anvil that punches through up to 3 crumble tiles, or does 2 damage to a slab, cd 5 s. |
+| **Glim**, the alchemist (light: **two air jumps**) | **Glue**: a lobbed glob; a 72 px sticky patch for 7 s (speed x0.1, jump x0.55; you count as standing still, so the tile crumbles). 2 at once, cd 2.3 s. | **Oil**: a lobbed slick; a 110 px patch for 7 s (almost no friction or traction, top speed x1.25). 2 at once, cd 2.3 s. | **Acid**: a lobbed flask; a 80 px puddle that dissolves the tiles under it in under a second and eats 1 slab hp per 0.8 s, 2.5 s, cd 5.5 s. |
+| **Pip**, the acrobat (air spring) | **Spring**: a pad ahead of you. Launches whoever steps on it up (-17), or diagonally (-15 up, 8 sideways) if you held a direction when placing. Placed in the air it appears under you and launches you (-13.5) in place of your air jump. Arms in 0.25 s, 4 uses, 8 s, 2 at once, cd 1.8 s. | **Gust**: a fan that blows 340 px ahead for 3 s (0.27 px/tick² at the fan, half at the far end) after a 0.4 s spin-up. 1 at once, cd 8 s. | **Drill**: dive straight down (hop first if grounded); the tiles you land on break, neighbours within 140 px take +0.4 stress, slabs take 2 damage; you bounce up. An air jump cancels the dive. cd 4.5 s. |
+| **Fuse**, the demolitionist (air bumper) | **Bumper**: a floating bumper ahead that bounces anyone who touches it away at 11.5 px/tick. Arms in 0.5 s, 4 bounces, 7 s, 2 at once, cd 2.2 s. Placed while falling, it appears underfoot already armed and bounces Fuse up. | **Charge**: a lobbed sticky charge; after 1.7 s of beeping it breaks every tile within 115 px, does 2 damage to slabs and destroys placeables, cd 5 s. | **Saw**: a blade that rolls along surfaces at 7 px/tick for 2.2 s, dooming every crumble tile it crosses and chipping slabs; drops to lower tiers. cd 4.5 s. |
 
 Interactions that are built in (the combination space is the point):
 
@@ -168,19 +168,20 @@ Four stages, each 1600 x 900, with crumble rows on tiers 120 to 140 px apart.
 
 | Stage | Layout | Hazard rhythm |
 |---|---|---|
-| **Crumble Yard** | Five tiers, three sturdy slabs (two side, one centre-high). | **Comets** every 7 to 10 s skim the sturdy tiers (lanes at y 650 and 390), 1.5 s lane warning. |
-| **The Quarry** | A great 400 px stone ledge (8 hp) mid-stage, two high slabs, crumble rows around. | **Rockfall** every 3.3 to 5.3 s: a shadow marks a column for 1.3 s, then a boulder drops, pushing players down and smashing the first platform it hits (2 slab hp). 60% of rocks aim at a sturdy slab. |
-| **Tide Pools** | Three sturdy islands at the bottom, crumble tiers above. | **Tide** every 13 to 16 s: a 2 s warning, then the water rises over the islands for 4 s (lethal) and recedes. Small comets cross the middle tier. |
+| **Crumble Yard** (the gentlest) | A main floor of brick with a sturdy centre slab, two side slabs, tiers above, two small ledges low over the pit. | **Comets** every 6 to 8.7 s skim the sturdy slabs (lanes at y 640 and 470), 1.5 s lane warning. |
+| **The Quarry** | A great 400 px stone ledge (8 hp) over the pit, crumble wings, two high slabs. | **Rockfall** every 3.3 to 5 s: a shadow marks a column for 1.3 s, then a boulder drops, pushing players down and smashing the first platform it hits (2 slab hp). 60% of rocks aim at a sturdy slab, 25% at a player. |
+| **Tide Pools** | Three sturdy islands at the bottom, crumble tiers above. | **Tide** every 12 to 15 s: a 2 s warning, then the water rises over the islands for 4 s (lethal) and recedes. Comets cross the middle tier. |
 | **Gale Bridge** | One 25-tile bridge across the stage, two high slabs, a low slab under the middle. | **Gales** every 10 to 13 s: a 1.7 s warning, then 3.3 s of wind (0.34 px/tick²) from one side. Comets cross the high slabs. |
 
-Hazards have no owner: an elimination by a hazard is credited to whoever last
+Comets knock players 15 px/tick sideways and 7 up. Hazards have no owner: an elimination by a hazard is credited to whoever last
 affected the player (including whoever reflected the comet).
 
 ## Blast zones, stocks and credit
 
 <a id="blast-zone"></a>
 The blast zones are the edges of the world plus a margin: x < -260, x > 1860,
-y > 1040 (below the screen), y < -420 (far above). Crossing one, or touching
+y > 980 (just below the screen, so falling under the lowest tier needs a real
+recovery), y < -420 (far above). Crossing one, or touching
 the tide, eliminates. The eliminated player loses a stock and after 1.5 s
 respawns on a **halo**: a personal floating platform at the spawn point farthest
 from the others, which vanishes as soon as you step off it (or after 3 s).
@@ -195,9 +196,9 @@ platforms broken, then seat order.
 ## Overtime
 
 <a id="overtime"></a>
-Every match ends. From 2:30 of play, **overtime**: every 30 s, platforms take
-60% longer to come back and hazards come 20% more often (to a floor of 35% of
-the normal gap). From 4:00, **collapse**: nothing broken comes back, a random
+Every match ends. From 1:30 of play, **overtime**: every 30 s, platforms take
+50% longer to come back and hazards come 15% more often (to a floor of 40% of
+the normal gap). From 3:30, **collapse**: nothing broken comes back, a random
 crumble tile is doomed every 0.5 s and every sturdy slab loses 1 hp every 2 s.
 The stage is gone within about a minute.
 
@@ -235,6 +236,8 @@ Each tick a bot:
    surfaces it could reach: solid, low stress, not shaking, not coated, not in
    a warned hazard lane, rock column or the tide, not in a charge radius,
    preferring the middle of the stage and nearby ground. It heads for the best.
+   When an opponent is falling with nothing under them, normal and hard bots
+   **edge-guard**: they stand near the edge that player is heading for.
 2. **Moves.** Runs toward the target, jumps when the target is above, drops
    when it is below, uses the air jump to recover, and paces back and forth
    across tiles when it arrives so its ground holds.
@@ -243,12 +246,21 @@ Each tick a bot:
 4. **Uses its kit.** For each ready move it checks whether it would hurt an
    opponent: a lob that would land near an opponent's feet, a saw along an
    opponent's row, a drill from above, a wall or bumper in an opponent's path,
-   a spring under a recovering opponent's landing spot, a gust that would push
-   someone toward an edge. Its own recovery tools (ledge, air spring) come out
-   when it is falling with nothing below.
+   a gust that would push someone toward an edge, and against a recovering
+   opponent a bumper, wall, gust or lob at the edge they need. Its recovery
+   tools (ledge, air spring, air bumper, Glim's second air jump) come out when
+   it is falling with nothing below.
 
-Three levels: **easy** (reacts in 0.4 s, rarely uses moves, misjudges throws),
-**normal** (0.2 s) and **hard** (0.08 s, aims well, uses moves whenever useful).
+Three levels: **easy** (reacts in 0.4 s, rarely uses moves, misjudges throws,
+misses hazards 45% of the time, no edge-guarding), **normal** (0.2 s, misses
+15%) and **hard** (0.08 s, aims well, never misses a hazard, uses moves
+whenever useful).
+
+Playtesting with bots (4 normal bots, 3 stocks) gives an elimination every 15
+to 30 s on the Quarry, Tide Pools and Gale Bridge; the Yard is the gentlest
+stage. `tests/bots.test.js` checks that bot matches on every stage end with a
+winner within six minutes and that most eliminations happen before the
+collapse.
 
 ## Simulation
 

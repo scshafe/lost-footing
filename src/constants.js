@@ -7,7 +7,7 @@ export const TICK_HZ = 60;
 export const WORLD = Object.freeze({ w: 1600, h: 900 });
 
 // Leaving these bounds eliminates a player.
-export const BLAST = Object.freeze({ left: -260, right: 1860, top: -420, bottom: 1040 });
+export const BLAST = Object.freeze({ left: -260, right: 1860, top: -420, bottom: 980 });
 
 export const TILE = Object.freeze({ w: 48, h: 18 });
 
@@ -38,8 +38,8 @@ export const PLAYER = Object.freeze({
 
 export const CRUMBLE = Object.freeze({
   stillRate: 1 / 50, // stress per tick from a player standing still
-  moveRate: 1 / 170, // stress per tick from a player moving on it
-  decay: 1 / 220, // stress shed per tick with nobody on it
+  moveRate: 1 / 110, // stress per tick from a player moving on it
+  decay: 1 / 260, // stress shed per tick with nobody on it
   shakeAt: 0.45, // visible shaking from here
   doomAt: 0.75, // past this the tile keeps going by itself
   doomRate: 1 / 80,
@@ -49,7 +49,7 @@ export const CRUMBLE = Object.freeze({
   riderShare: 0.6, // a player riding someone's head adds this share of their load
   stompStress: 0.25, // a stomp drives the victim into the floor
   fallTicks: 40, // a broken tile falls (not solid) this long
-  respawnTicks: 150, // then is gone this long
+  respawnTicks: 200, // then is gone this long
   reappearTicks: 45, // then flickers back (not solid) this long
 });
 
@@ -78,9 +78,9 @@ export const MATCH = Object.freeze({
   haloWidth: 84,
   blameWindow: 300, // ticks an indirect cause stays credited
   endDelay: 120,
-  overtimeAt: 150 * 60,
+  overtimeAt: 90 * 60,
   overtimeStep: 30 * 60,
-  collapseAt: 240 * 60,
+  collapseAt: 210 * 60,
   collapseEvery: 30, // during collapse a tile is doomed this often
   collapseSturdyEvery: 120, // and every sturdy slab loses 1 hp this often
 });

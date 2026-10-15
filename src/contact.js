@@ -57,7 +57,7 @@ function contactPair(state, a, b) {
     upper.y = lower.y - upper.h;
     upper.vy = lower.vy - bounce;
     upper.ground = null;
-    upper.jumpsLeft = 1;
+    upper.jumpsLeft = upper.airJumps;
     upper.jumpHeld = false;
     upper.drill = 0;
     if (lower.ground) {
@@ -70,6 +70,7 @@ function contactPair(state, a, b) {
             t.stress = Math.min(1, t.stress + CRUMBLE.stompStress);
             t.stressBy = upper.seat;
             t.stressAt = state.tick;
+            t.stressCause = "stomp";
           }
         }
       }
@@ -97,7 +98,7 @@ function contactPair(state, a, b) {
       upper.ground = { kind: "player", id: lower.seat };
       upper.groundTop = lower.y;
       upper.supportTiles.length = 0;
-      upper.jumpsLeft = 1;
+      upper.jumpsLeft = upper.airJumps;
     }
   }
 }
