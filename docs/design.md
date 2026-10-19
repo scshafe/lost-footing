@@ -202,7 +202,7 @@ Interactions that are built in (the combination space is the point):
 ## Stages and hazards
 
 <a id="stage-hazard"></a>
-Four stages, each 1600 x 900, with crumble rows on tiers 120 to 140 px apart.
+Six stages, each 1600 x 900, with crumble rows on tiers 120 to 140 px apart.
 
 | Stage | Layout | Hazard rhythm |
 |---|---|---|
@@ -210,6 +210,17 @@ Four stages, each 1600 x 900, with crumble rows on tiers 120 to 140 px apart.
 | **The Quarry** | A great 400 px stone ledge (8 hp) over the pit, crumble wings, two high slabs. | **Rockfall** every 3.3 to 5 s: a shadow marks a column for 1.3 s, then a boulder drops, pushing players down and smashing the first platform it hits (2 slab hp). 60% of rocks aim at a sturdy slab, 25% at a player. |
 | **Tide Pools** | Three sturdy islands at the bottom, crumble tiers above. | **Tide** every 12 to 15 s: a 2 s warning, then the water rises over the islands for 4 s (lethal) and recedes. Comets cross the middle tier. |
 | **Gale Bridge** | One 25-tile bridge across the stage, two high slabs, a low slab under the middle. | **Gales** every 10 to 13 s: a 1.7 s warning, then 3.3 s of wind (0.34 px/tick²) from one side. Comets cross the high slabs. |
+| **Conveyor Sky** (moving floors) | Seven belt rows on four tiers, a centre slab and two side slabs. Belts alternate direction, tier by tier: the low tier carries toward the middle, the second and top tiers carry out toward the edges. | **Belts** reverse every 7 to 10 s: they stop for a 1.25 s warning (chevrons turn orange), then all run the other way. Comets cross the slabs (lanes y 650 and 480). |
+| **Sinking Ship** (moving floors) | Six deck rows that heave on the swell, the two halves of the main deck half a period apart, a keel slab at the bottom and two side slabs. | **Tide** as in Tide Pools (it floods the keel), plus comets across the side slabs. |
+
+**Moving floors.** A row can carry a belt speed or ride a sine (a *bob*: amplitude
+22 to 36 px, period 6 to 10 s). Every tile of a row moves together, so a row is
+still a tier. A player standing on a tile rides it: a belt adds its speed to
+their position (it is not a velocity, so standing still on a belt still crumbles
+the tile and carries you toward the edge), and a deck's rise and fall is added to
+their height. Everything that finds "the tile I stand on" (moves, bots) works on
+the tile's current height. Objects on a deck follow its height; objects do not
+ride belts. Slabs and comet lanes do not move.
 
 Comets knock players 15 px/tick sideways and 7 up. Hazards have no owner: an elimination by a hazard is credited to whoever last
 affected the player (including whoever reflected the comet).
@@ -302,9 +313,12 @@ whenever useful).
 
 Playtesting with bots (4 normal bots, 3 stocks) gives an elimination every 15
 to 30 s on the Quarry, Tide Pools and Gale Bridge; the Yard is the gentlest
-stage. `tests/bots.test.js` checks that bot matches on every stage end with a
-winner within six minutes and that most eliminations happen before the
-collapse.
+stage, and so are the two moving stages, where bots (who simply keep walking)
+take most of a match to be worn down. `tests/bots.test.js` checks that bot
+matches on every stage end with a winner within six minutes and, on the first
+four stages, that most eliminations happen before the collapse. The moving
+stages have not been played by people yet; their numbers (belt speeds, swell
+amplitudes, reversal rhythm) are first guesses.
 
 ## Simulation
 
@@ -363,5 +377,4 @@ collapse.
 
 - Online play (lockstep or rollback over the deterministic simulation).
 - Gamepad support (the brief says keyboard only, so this needs the owner's say).
-- Moving stages (a sinking ship, a conveyor sky).
 - Team mode and handicaps; replays from recorded inputs.

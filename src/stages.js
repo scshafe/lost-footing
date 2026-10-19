@@ -2,7 +2,10 @@
 // points (where respawn halos appear) and the stage hazards that make the
 // sturdy slabs dangerous on a rhythm. Everything is in the 1600x900 world.
 //
-// rows:   { x, y, n }        n crumble tiles of TILE.w starting at x, top at y
+// rows:   { x, y, n, belt?, bob? }  n crumble tiles of TILE.w starting at x, top at y.
+//         belt: px/tick a player standing on the row is carried (+ right); the
+//         "belts" hazard stops and reverses every belt together.
+//         bob: { amp, period, phase } the row rides up and down (px, ticks, radians).
 // slabs:  { x, y, w, hp? }   one sturdy slab
 // spawns: { x, y }           halo centre x and halo top y
 // hazards: see src/hazards.js
@@ -127,6 +130,65 @@ export const STAGES = [
       { type: "comet", lanes: [380], every: [540, 780], warn: 90, speed: 8 },
     ],
   },
+  {
+    id: "belts",
+    name: "Conveyor Sky",
+    blurb: "Moving walkways in the sky. Standing still carries you; every so often they all stop and run the other way.",
+    theme: { skyTop: "#241b3d", skyBottom: "#5a3b6b", tile: "#7c8fb3", tileEdge: "#3e4a69", slab: "#a8a8b8", accent: "#ffd9a0", hazard: "#ff9f43" },
+    rows: [
+      { x: 240, y: 650, n: 7, belt: 1.2 },
+      { x: 1024, y: 650, n: 7, belt: -1.2 },
+      { x: 380, y: 520, n: 5, belt: -1.4 },
+      { x: 980, y: 520, n: 5, belt: 1.4 },
+      { x: 560, y: 390, n: 10, belt: 1 },
+      { x: 300, y: 260, n: 4, belt: -1.2 },
+      { x: 1108, y: 260, n: 4, belt: 1.2 },
+    ],
+    slabs: [
+      { x: 700, y: 650, w: 200 },
+      { x: 130, y: 480, w: 140 },
+      { x: 1330, y: 480, w: 140 },
+    ],
+    spawns: [
+      { x: 470, y: 440 },
+      { x: 1130, y: 440 },
+      { x: 800, y: 310 },
+      { x: 800, y: 190 },
+    ],
+    hazards: [
+      { type: "belts", every: [420, 600], warn: 75 },
+      { type: "comet", lanes: [650, 480], every: [540, 780], warn: 90, speed: 8 },
+    ],
+  },
+  {
+    id: "swell",
+    name: "Sinking Ship",
+    blurb: "Decks heave on the swell, halves out of step, and the sea keeps coming in over the keel.",
+    theme: { skyTop: "#14202e", skyBottom: "#3a5568", tile: "#a8794a", tileEdge: "#5b3d22", slab: "#9aa7ad", accent: "#c8eaff", hazard: "#59d0ff" },
+    rows: [
+      { x: 220, y: 640, n: 12, bob: { amp: 34, period: 540, phase: 0 } },
+      { x: 820, y: 640, n: 12, bob: { amp: 34, period: 540, phase: Math.PI } },
+      { x: 380, y: 510, n: 5, bob: { amp: 28, period: 420, phase: 1 } },
+      { x: 980, y: 510, n: 5, bob: { amp: 28, period: 420, phase: 1 + Math.PI } },
+      { x: 620, y: 380, n: 7, bob: { amp: 36, period: 600, phase: 0.5 } },
+      { x: 700, y: 250, n: 4, bob: { amp: 22, period: 360, phase: 2 } },
+    ],
+    slabs: [
+      { x: 700, y: 780, w: 200 },
+      { x: 130, y: 420, w: 130 },
+      { x: 1340, y: 420, w: 130 },
+    ],
+    spawns: [
+      { x: 470, y: 440 },
+      { x: 1130, y: 440 },
+      { x: 800, y: 300 },
+      { x: 800, y: 180 },
+    ],
+    hazards: [
+      { type: "tide", every: [720, 900], warn: 120, rise: 150, hold: 240, fall: 150, low: 960, high: 735 },
+      { type: "comet", lanes: [420], every: [540, 840], warn: 90, speed: 7.5 },
+    ],
+  },
 ];
 
 // A flat test stage for unit tests: one long row of crumble tiles and one slab.
@@ -179,6 +241,12 @@ export function buildTiles(stage) {
         hollow: 0,
         hollowArm: 0,
         hollowBy: -1,
+        homeY: row.y,
+        bob: row.bob || null,
+        beltDir: Math.sign(row.belt || 0),
+        beltSpeed: Math.abs(row.belt || 0),
+        belt: 0, // carried px/tick this tick
+        dy: 0, // moved this tick
       });
     }
   }

@@ -191,7 +191,11 @@ export const sfx = {
     if (hazard === "comet") for (let i = 0; i < 3; i++) tone({ f: 880, f2: 660, dur: 0.18, type: "sawtooth", vol: 0.08, delay: i * 0.25 });
     else if (hazard === "rock") tone({ f: 300, f2: 200, dur: 0.4, type: "triangle", vol: 0.1 });
     else if (hazard === "tide") for (let i = 0; i < 2; i++) tone({ f: 220, f2: 330, dur: 0.5, type: "sine", vol: 0.15, delay: i * 0.6 });
+    else if (hazard === "belts") for (let i = 0; i < 3; i++) tone({ f: 330 - i * 50, dur: 0.2, type: "square", vol: 0.08, delay: i * 0.25 });
     else if (hazard === "gale") noise({ dur: 1.2, freq: 400, f2: 1600, type: "bandpass", q: 1.5, vol: 0.15 });
+  },
+  beltsFlip() {
+    if (ok("beltsFlip", 200)) tone({ f: 200, f2: 400, dur: 0.25, type: "square", vol: 0.1 });
   },
   comet() {
     if (ok()) noise({ dur: 1.4, freq: 300, f2: 1400, type: "bandpass", q: 2, vol: 0.2 });
@@ -315,6 +319,8 @@ export function playEvent(e) {
       return sfx.hit();
     case "rockSmash":
       return sfx.rockSmash();
+    case "beltsFlip":
+      return sfx.beltsFlip();
     case "galeBlow":
       return sfx.gale();
     case "tideRise":

@@ -198,9 +198,22 @@ export function surfaces(state) {
   return list;
 }
 
+// Standing on a moving tile (a bobbing deck, a conveyor belt): ride it. Runs
+// at the start of the tick, before buttons are read, so every move and bot
+// sees the ground where it is now.
+export function rideTile(state, p) {
+  if (!p.ground || p.ground.kind !== "tile") return;
+  const under = getTile(state, p.ground.id);
+  if (!under || under.state !== "solid") return;
+  p.y += under.dy || 0;
+  p.x += under.belt || 0;
+  p.groundTop = under.y;
+}
+
 // Apply gravity and move the player through the world.
 export function movePlayer(state, p, surfs, walls) {
   const wasGrounded = !!p.ground;
+
   if (p.drill === -1) {
     p.vx = 0;
     p.vy = 16;

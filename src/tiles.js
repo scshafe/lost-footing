@@ -131,7 +131,23 @@ export function breakTile(state, tile, by = -1, cause = "break") {
   addEvent(state, { type: "tileBreak", kind: tile.kind, x: tile.x + tile.w / 2, y: tile.y, w: tile.w, by, id: tile.id });
 }
 
+// Rows that move: bobbing decks ride a sine, belts carry whoever stands on
+// them. Players pick up a tile's dy and belt on their next move (movePlayer).
+function moveTiles(state) {
+  const belts = state.hazards.belts;
+  const run = belts && belts.phase === "run" ? belts.sign : 0;
+  for (const t of state.tiles) {
+    if (t.bob) {
+      const y = t.homeY + t.bob.amp * Math.sin((state.tick / t.bob.period) * Math.PI * 2 + t.bob.phase);
+      t.dy = y - t.y;
+      t.y = y;
+    }
+    if (t.beltDir) t.belt = t.beltDir * t.beltSpeed * run;
+  }
+}
+
 export function updateTiles(state) {
+  moveTiles(state);
   const respawnMult = state.respawnMult;
   let removeTemp = false;
   for (const tile of state.tiles) {

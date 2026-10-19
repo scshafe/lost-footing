@@ -6,7 +6,7 @@ import { BLAST, MATCH, TILE } from "./constants.js";
 import { seedToU32, randInt } from "./rng.js";
 import { stageById, buildTiles } from "./stages.js";
 import { addEvent, blame, currentBlame } from "./common.js";
-import { newPlayer, controlPlayer, movePlayer, surfaces, applyLoad, tickPlayer } from "./players.js";
+import { newPlayer, controlPlayer, movePlayer, rideTile, surfaces, applyLoad, tickPlayer } from "./players.js";
 import { resolveContacts } from "./contact.js";
 import { updateTiles, addTempTile, isSolid, breakTile, damageTile } from "./tiles.js";
 import { castMoves, updateDrill } from "./characters.js";
@@ -104,6 +104,9 @@ export function step(state, inputs = []) {
     }
   }
   const live = state.phase !== "intro";
+
+  // Moving floors carry whoever stands on them.
+  if (live) for (const p of state.players) if (p.status === "play") rideTile(state, p);
 
   // Buttons for this tick.
   for (const p of state.players) {

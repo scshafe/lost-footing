@@ -52,7 +52,8 @@ deploys it (`deploy/stack/`, `.github/workflows/deploy.yml`).
 | Ferro, the magnetist | Lodestone | Polarity | Ingot | takes the loose metal she pulls |
 
 Stages: Crumble Yard (comets), The Quarry (rockfall), Tide Pools (the tide),
-Gale Bridge (gales).
+Gale Bridge (gales), Conveyor Sky (belts that stop and reverse), Sinking Ship
+(heaving decks and the tide).
 
 ## Controls
 
