@@ -87,7 +87,7 @@ function toast(text) {
 
 function startDemo() {
   const stage = STAGES[Math.floor(Math.random() * STAGES.length)].id;
-  const ids = [...CHARACTER_IDS].sort(() => Math.random() - 0.5);
+  const ids = [...CHARACTER_IDS].sort(() => Math.random() - 0.5).slice(0, 4);
   match = createMatch({
     seed: Math.floor(Math.random() * 1e9),
     stage,

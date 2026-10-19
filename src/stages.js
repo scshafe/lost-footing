@@ -176,6 +176,9 @@ export function buildTiles(stage) {
         stressCause: "",
         owner: -1,
         life: -1,
+        hollow: 0,
+        hollowArm: 0,
+        hollowBy: -1,
       });
     }
   }
@@ -200,6 +203,9 @@ export function buildTiles(stage) {
       stressCause: "",
       owner: -1,
       life: -1,
+      hollow: 0,
+      hollowArm: 0,
+      hollowBy: -1,
     });
   }
   return tiles;

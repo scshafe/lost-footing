@@ -97,3 +97,26 @@ The personal floating platform a player respawns on. Only its owner can stand
 on it, and it vanishes when they step off or after three seconds.
 """
 refs = ["docs/design.md#blast-zone"]
+
+[[term]]
+slug = "decoy"
+title = "Decoy"
+definition = """
+Dab's fake floor: a temporary tile drawn like a crumble tile that only its
+painter can stand on. Everyone else falls through it, and is credited to Dab.
+Not floor for objects, and not a hollow tile (which is a real tile turned
+hollow).
+"""
+refs = ["docs/design.md#forged-floor"]
+aliases = ["fake platform", "forgery"]
+
+[[term]]
+slug = "hollow-tile"
+title = "Hollow tile"
+definition = """
+A real crumble tile that Dab has hollowed: after a short shimmer it holds only
+her for a couple of seconds, then goes back to normal. Still a normal tile for
+objects.
+"""
+refs = ["docs/design.md#forged-floor"]
+aliases = ["hollowed tile"]

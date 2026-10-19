@@ -41,6 +41,16 @@ test("bot matches on every stage end with a winner in time (no unkillable safe s
   assert.ok(early / kos > 0.6, `${early} of ${kos} eliminations before the collapse`);
 });
 
+test("matches with Dab end with a winner on every stage", () => {
+  for (const st of STAGES) {
+    const seats = ["dab", "mason", "pip", "glim"].map((character) => ({ kind: "bot", character, difficulty: "normal" }));
+    const s = createMatch({ seed: 41, stage: st.id, stocks: 3, seats });
+    while (s.phase !== "over" && s.tick < LIMIT) step(s, []);
+    assert.equal(s.phase, "over", `${st.id} ended`);
+    assert.ok(s.result.winner >= 0);
+  }
+});
+
 test("1v1 bot matches end too, at every difficulty", () => {
   for (const [i, d] of ["easy", "normal", "hard"].entries()) {
     const { s } = botMatch(STAGES[i].id, 21 + i, 2, d);

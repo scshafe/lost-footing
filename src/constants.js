@@ -53,6 +53,12 @@ export const CRUMBLE = Object.freeze({
   reappearTicks: 45, // then flickers back (not solid) this long
 });
 
+// Tile tricks (Dab): hollowed tiles look solid but only their painter can stand on them.
+export const HOLLOW = Object.freeze({
+  arm: 24, // a hollowed tile shimmers this long before it gives way
+  ticks: 150, // then is hollow this long
+});
+
 export const STURDY = Object.freeze({
   hp: 4,
   respawnTicks: 480,
