@@ -165,6 +165,8 @@ Move keys are the same role for everyone:
 
 | **Dab**, the forger (decoys and hollowed tiles hold only her) | **Decoy**: paints two tiles of fake floor ahead (90 px, or 150 px with forward held) at your feet's height; fizzles if it would sit on real floor. Solid for Dab only. In the air it appears under you. 5 s, 2 at once, cd 3.3 s. | **Hollow**: crumble tiles 30 to 160 px ahead on your tier shimmer for 0.4 s, then for 2.5 s hold only Dab, so anyone on them drops. cd 7 s. | **Rub out**: a 170 px brushstroke starting past the tiles you stand on; after 0.5 s every platform in it is erased (slabs take 2 damage). cd 4.5 s. |
 
+| **Fern**, the gardener (patient: slow to sprout, long to last) | **Vine**: a seed 50 px ahead; after 0.5 s it grows four one-way leaves (56 x 12) in a zigzag, 38 px either side of the seed and 64 px apart, one every 0.2 s, each lasting about 7 s. Anyone can climb it. Needs ground. 2 at once, cd 5.5 s. | **Thorns**: a 150 px bramble patch starting 30 px ahead, growing for 0.4 s, then 5 s. Standing in it: speed x0.4, accel x0.5, jump x0.8, and it adds 1/130 stress per tick to crumble tiles under it (more than they shed, so an empty patch still wears them down in about 4 s). 2 at once, cd 4 s. | **Roots**: a seed 110 px ahead. For 1 s the tiles within 125 px shake (stress held at 0.48); then they are doomed and break within half a second; slabs in reach take 1 damage. 1 at once, cd 5.5 s. |
+
 Interactions that are built in (the combination space is the point):
 
 - **Glue on crumble = a trap.** Glue makes you "still", so the tile under you
@@ -182,6 +184,10 @@ Interactions that are built in (the combination space is the point):
 - **Walls pin**: pressing into a wall keeps you "still", so your tile crumbles.
 - **Decoy + Rub out**: Dab can erase the real floor next to her decoy and walk
   on across the gap.
+- **Vine + Roots / Rub out**: climb a vine and the floor you left can be taken
+  out from under the ones chasing you.
+- **Thorns + anything that keeps you still**: slowed players are easy to pin
+  with a wall or a lob.
 - **Hollow + a stomp or a spring**: a launched player who lands on a hollowed
   tile drops straight through it.
 
@@ -274,7 +280,10 @@ Each tick a bot:
    opponent a bumper, wall, gust or lob at the edge they need. Its recovery
    tools (ledge, air spring, air bumper, Dab's air decoy, Glim's second air
    jump) come out when it is falling with nothing below. Dab's bot hollows
-   tiles under an opponent on its tier and rubs out the floor ahead of one.
+   tiles under an opponent on its tier and rubs out the floor ahead of one;
+   Fern's bot grows thorns in an opponent's path and plants roots under one
+   (the vine is left to people). Bots treat thorns and a growing root bulge as
+   dangerous floor.
 
 Three levels: **easy** (reacts in 0.4 s, rarely uses moves, misjudges throws,
 misses hazards 45% of the time, no edge-guarding), **normal** (0.2 s, misses
@@ -319,7 +328,7 @@ collapse.
   Off-screen players get an arrow at the screen edge in their colour.
 - Player colours are per seat (P1 red, P2 blue, P3 green, P4 gold); characters
   differ in silhouette (Mason's hard hat, Glim's hood, Pip's antenna, Fuse's
-  goggles and spark, Dab's beret).
+  goggles and spark, Dab's beret, Fern's sprout).
 - Tiles jitter and redden as stress rises, crack when doomed, and fall
   tumbling; respawning tiles flicker in outline. Hazard warnings are lane
   stripes, shadows and edge arrows with a siren.
@@ -329,6 +338,9 @@ collapse.
 - Forged floor: a decoy is drawn as an ordinary tile with a slow pulse of its
   painter's colour; hollowed tiles pulse faster while they arm. Rub out shows
   its stroke as a dashed box that fills in as it lands.
+- Fern's plants: a seed and a shoot while a vine sprouts (then green leaves,
+  wilting yellow in the last second); thorns grow up as spikes; roots show a
+  dashed circle that tightens and a swelling mound.
 - Synthesized sound (WebAudio, no files), mute with M.
 - KOs flash at the blast zone in the victim's colour, shake the screen and
   post to a feed ("P1's glue → P3").
@@ -339,7 +351,6 @@ collapse.
 
 - Online play (lockstep or rollback over the deterministic simulation).
 - Gamepad support (the brief says keyboard only, so this needs the owner's say).
-- More characters: a magnet user (pulls placeables), a gardener (vines that
-  grow into ladders).
+- More characters: a magnet user (pulls placeables).
 - Moving stages (a sinking ship, a conveyor sky).
 - Team mode and handicaps; replays from recorded inputs.

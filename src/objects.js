@@ -3,9 +3,9 @@
 // damages or knocks back a player by itself being thrown at them: they change
 // the ground, block paths, launch or push whoever walks into them.
 
-import { PLAYER } from "./constants.js";
+import { PLAYER, CRUMBLE } from "./constants.js";
 import { addEvent, blame, circleBox, sign } from "./common.js";
-import { getTile, isSolid, isFloor, breakTile, damageTile, stressTile } from "./tiles.js";
+import { getTile, isSolid, isFloor, addTempTile, breakTile, damageTile, stressTile } from "./tiles.js";
 
 export const OBJ = Object.freeze({
   gravity: 0.6,
@@ -25,6 +25,9 @@ export const OBJ = Object.freeze({
   decoy: { w: 96, h: 18, life: 300, max: 2, near: 90, far: 150 },
   hollow: { near: 30, reach: 130 },
   rub: { near: 8, reach: 170, delay: 30 },
+  vine: { leaves: 4, rise: 64, off: 38, w: 56, h: 12, life: 420, delay: 30, grow: 12, max: 2 },
+  thorn: { w: 150, life: 300, max: 2, stress: 1 / 130, arm: 24, near: 30 },
+  roots: { r: 125, fuse: 60, max: 1 },
 });
 
 export function addObject(state, o) {
@@ -321,6 +324,12 @@ export function updateObjects(state) {
           o.dead = true;
           break;
         }
+        if (o.coat === "thorn" && o.armed === 0) {
+          for (const id of o.supports) {
+            const t = getTile(state, id);
+            if (t.kind === "crumble") stressTile(state, t, OBJ.thorn.stress, o.owner, "thorn");
+          }
+        }
         if (o.coat === "acid") {
           o.tick++;
           for (const id of o.supports) {
@@ -368,6 +377,28 @@ export function updateObjects(state) {
         if (--o.life <= 0) o.dead = true;
         break;
       }
+      case "vine": {
+        if (!isSolid(getTile(state, o.sup))) {
+          o.dead = true; // the seed lost its ground
+          break;
+        }
+        if (--o.fuse > 0) break;
+        growLeaf(state, o);
+        o.fuse = OBJ.vine.grow;
+        if (o.step >= OBJ.vine.leaves) o.dead = true;
+        break;
+      }
+      case "roots": {
+        o.fuse--;
+        if (o.fuse > 0) {
+          if (o.fuse % 8 === 0) rootsShake(state, o, false);
+          break;
+        }
+        o.dead = true;
+        rootsShake(state, o, true);
+        surfs = objectSurfaces(state);
+        break;
+      }
       case "rub": {
         if (--o.fuse > 0) break;
         o.dead = true;
@@ -382,6 +413,36 @@ export function updateObjects(state) {
     }
   }
   if (state.objects.some((o) => o.dead)) state.objects = state.objects.filter((o) => !o.dead);
+}
+
+// Fern's vine grows a leaf: they zigzag up from the seed, each a short jump
+// above the last.
+function growLeaf(state, o) {
+  const v = OBJ.vine;
+  const i = o.step++;
+  const side = (i % 2 === 0 ? 1 : -1) * o.dir;
+  const cx = o.x + side * v.off;
+  const y = o.top - v.rise * (i + 1);
+  addTempTile(state, { kind: "leaf", x: cx - v.w / 2, y, w: v.w, h: v.h, owner: o.owner, life: v.life - i * v.grow, hp: 1 });
+  addEvent(state, { type: "grow", x: cx, y, owner: o.owner });
+}
+
+// Fern's roots: the tiles around the seed shake while it swells, then give way.
+function rootsShake(state, o, burst) {
+  const r = OBJ.roots.r;
+  for (const t of state.tiles) {
+    if (!isFloor(t) || !circleBox(o.x, o.top - 6, r, t.x, t.y, t.w, t.h)) continue;
+    if (t.kind === "crumble") {
+      const to = burst ? CRUMBLE.doomAt + 0.03 : CRUMBLE.shakeAt + 0.03;
+      if (t.stress < to) t.stress = to;
+      t.stressBy = o.owner;
+      t.stressAt = state.tick;
+      t.stressCause = "roots";
+    } else if (burst) {
+      damageTile(state, t, 1, o.owner, "roots");
+    }
+  }
+  if (burst) addEvent(state, { type: "rootBurst", x: o.x, y: o.top, r, owner: o.owner });
 }
 
 // Dab's eraser stroke lands: the platforms in its span at its height go.

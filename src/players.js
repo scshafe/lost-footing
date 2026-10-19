@@ -91,6 +91,7 @@ export function surfaceUnder(state, p) {
 const PLAIN = { speed: 1, accel: 1, friction: PLAYER.groundFriction, overDecay: PLAYER.overGroundDecay, jump: 1 };
 const GLUE = { speed: 0.1, accel: 0.4, friction: 0.5, overDecay: 0.6, jump: 0.55 };
 const OIL = { speed: 1.25, accel: 0.25, friction: 0.995, overDecay: 0.995, jump: 1 };
+const THORN = { speed: 0.4, accel: 0.5, friction: 0.6, overDecay: 0.6, jump: 0.8 };
 
 // Read the buttons and turn them into velocity, jumps and drops.
 export function controlPlayer(state, p) {
@@ -101,7 +102,7 @@ export function controlPlayer(state, p) {
   const coat = surfaceUnder(state, p);
   p.surface = coat ? coat.coat : "plain";
   if (coat && coat.owner !== p.seat) blame(state, p, coat.owner, coat.coat);
-  const mods = p.surface === "glue" ? GLUE : p.surface === "oil" ? OIL : PLAIN;
+  const mods = p.surface === "glue" ? GLUE : p.surface === "oil" ? OIL : p.surface === "thorn" ? THORN : PLAIN;
 
   // The drill takes over (src/characters.js); an air jump cancels the dive.
   if (p.drill === -1 && pressed & BTN.UP && p.jumpsLeft > 0 && !p.ground) p.drill = 0;

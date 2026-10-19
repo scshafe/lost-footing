@@ -7,7 +7,7 @@ import { BTN, MOVE_BUTTONS } from "./input.js";
 import { addEvent, overlaps } from "./common.js";
 import { addTempTile, getTile, isSolid, isFloor, breakTile, damageTile, stressTile } from "./tiles.js";
 import { HOLLOW, TILE } from "./constants.js";
-import { OBJ, addObject, limitOwned, springLaunchSelf, bumperBounce } from "./objects.js";
+import { OBJ, addObject, limitOwned, makeCoat, springLaunchSelf, bumperBounce } from "./objects.js";
 
 // Throw velocity: neutral, forward held (far), up held (high lob).
 export function lobVelocity(p, btn = p.btn) {
@@ -312,6 +312,38 @@ function castRub(state, p) {
   return true;
 }
 
+// ---- Fern ---------------------------------------------------------------
+
+function castVine(state, p) {
+  if (!p.ground || p.ground.kind !== "tile") return false;
+  const x = p.x + p.w / 2 + p.facing * 50;
+  const t = tileAtTop(state, x, p.groundTop);
+  if (!t) return false; // a seed needs ground
+  limitOwned(state, p.seat, (o) => o.type === "vine", OBJ.vine.max);
+  addObject(state, { type: "vine", owner: p.seat, x, top: p.groundTop, dir: p.facing, step: 0, sup: t.id, fuse: OBJ.vine.delay });
+  addEvent(state, { type: "place", obj: "vine", seat: p.seat, x, y: p.groundTop });
+  return true;
+}
+
+function castThorns(state, p) {
+  if (!p.ground || p.ground.kind !== "tile") return false;
+  const { w, near, arm } = OBJ.thorn;
+  const x = p.x + p.w / 2 + p.facing * (near + w / 2);
+  const coat = makeCoat(state, p.seat, "thorn", x, p.groundTop);
+  if (!coat) return false;
+  coat.armed = arm;
+  return true;
+}
+
+function castRoots(state, p) {
+  if (!p.ground || p.ground.kind !== "tile") return false;
+  limitOwned(state, p.seat, (o) => o.type === "roots", OBJ.roots.max);
+  const x = p.x + p.w / 2 + p.facing * 110;
+  addObject(state, { type: "roots", owner: p.seat, x, top: p.groundTop, fuse: OBJ.roots.fuse });
+  addEvent(state, { type: "place", obj: "roots", seat: p.seat, x, y: p.groundTop });
+  return true;
+}
+
 // ---- The roster ---------------------------------------------------------
 
 export const CHARACTERS = {
@@ -374,6 +406,18 @@ export const CHARACTERS = {
       { name: "Decoy", cd: 200, cast: castDecoy, desc: "Paints two tiles of fake floor (ahead, or further if you hold forward). Only Dab can stand on it. In the air it appears under you." },
       { name: "Hollow", cd: 420, cast: castHollow, desc: "Tiles ahead shimmer, then for 2.5 s hold only Dab. Anyone standing there drops." },
       { name: "Rub out", cd: 270, cast: castRub, desc: "A brushstroke past your own tiles: after half a second every platform it covers is erased." },
+    ],
+  },
+  fern: {
+    id: "fern",
+    name: "Fern",
+    title: "the gardener",
+    trait: "Patient: her plants take a moment to sprout, then last longer than a ledge.",
+    blurb: "A vine of leaves to climb, thorns that bog the floor down, roots that shake the tiles loose.",
+    moves: [
+      { name: "Vine", cd: 330, cast: castVine, desc: "A seed ahead sprouts a zigzag ladder of four leaves, 7 s. Anyone can climb it. 2 at once." },
+      { name: "Thorns", cd: 240, cast: castThorns, desc: "A bramble patch ahead after a moment's growth: slow and stuck on it, and it chews the tiles under it. 5 s." },
+      { name: "Roots", cd: 330, cast: castRoots, desc: "A seed ahead: the tiles around it shake for a second, then break. Slabs take 1 damage." },
     ],
   },
 };
