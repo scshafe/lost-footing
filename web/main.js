@@ -101,7 +101,7 @@ function startDemo() {
 function startMatch() {
   const seats = [];
   settings.seats.forEach((s, i) => {
-    if (s.kind !== "off") seats.push({ kind: s.kind, character: s.character, difficulty: s.difficulty, slot: i });
+    if (s.kind !== "off") seats.push({ kind: s.kind, character: s.character, difficulty: s.difficulty, slot: i, team: s.team ? s.team - 1 : -1, stocks: seatStocks(s) });
   });
   const stage = settings.stage === "random" ? STAGES[Math.floor(Math.random() * STAGES.length)].id : settings.stage;
   match = createMatch({ seed: Math.floor(Math.random() * 1e9), stage, stocks: settings.stocks, seats });
@@ -163,7 +163,19 @@ function render() {
 
 function seatCtl(i) {
   const l = (a) => `<kbd>${shortLabel(i, a)}</kbd>`;
-  return `${l("left")}${l("right")} character · ${l("place")} join · ${l("brk")} leave · <kbd>${i + 1}</kbd> bot`;
+  return `${l("left")}${l("right")} character · ${l("trick")} team · ${l("up")}${l("down")} stocks · ${l("place")} join · ${l("brk")} leave · <kbd>${i + 1}</kbd> bot`;
+}
+
+const TEAM_LABELS = ["Solo", "Team A", "Team B"];
+const TEAM_TINTS = ["#9aa", "#ff7be5", "#7be5ff"];
+const seatStocks = (s) => Math.max(1, Math.min(9, settings.stocks + (s.handicap || 0)));
+
+// Teams need two sides: someone on another team or playing alone.
+function teamProblem() {
+  const active = settings.seats.filter((s) => s.kind !== "off");
+  if (!active.some((s) => s.team)) return null;
+  const sides = new Set(active.map((s, i) => (s.team ? `t${s.team}` : `s${i}`)));
+  return sides.size < 2 ? "Teams need two sides: put someone on the other team, or leave a player solo" : null;
 }
 
 function setupHtml() {
@@ -183,6 +195,7 @@ function setupHtml() {
         .join("");
       return `<div class="seat" style="border-color:${color}">${head}
         <div class="kind">${kind}</div>
+        <div class="teamrow"><b style="color:${TEAM_TINTS[seat.team || 0]}">${TEAM_LABELS[seat.team || 0]}</b> · ${seatStocks(seat)} stock${seatStocks(seat) > 1 ? "s" : ""}${seat.handicap ? ` (${seat.handicap > 0 ? "+" : ""}${seat.handicap})` : ""}</div>
         <canvas width="120" height="96" data-portrait="${i}"></canvas>
         <div class="cname">◂ ${ch.name} ▸</div><div class="ctitle">${ch.title}</div>
         <div class="trait">${ch.trait}</div>
@@ -193,9 +206,9 @@ function setupHtml() {
   const active = settings.seats.filter((s) => s.kind !== "off").length;
   return `<div class="screen">
     <h2>Players</h2>
-    <p class="sub">Each player uses their own keys to join and pick a character. Number keys <kbd>1</kbd>–<kbd>4</kbd> add or change bots.</p>
+    <p class="sub">Each player uses their own keys to join and pick a character. Number keys <kbd>1</kbd>–<kbd>4</kbd> add or change bots. Trick sets a team (players on the same team win or lose together); up and down give a handicap in stocks.</p>
     <div class="seats">${cards}</div>
-    <p class="hint">${active >= 2 ? "<kbd>Enter</kbd> choose a stage" : "At least two players or bots"} · <kbd>Esc</kbd> back</p>
+    <p class="hint">${teamProblem() || (active >= 2 ? "<kbd>Enter</kbd> choose a stage" : "At least two players or bots")} · <kbd>Esc</kbd> back</p>
   </div>`;
 }
 
@@ -411,13 +424,18 @@ function resultsHtml() {
     .map((seat, i) => {
       const p = m.players[seat];
       const st = p.stats;
-      return `<tr><td><b style="color:${SEAT_COLORS[p.slot]}">${i + 1}. ${SEAT_NAMES[p.slot]}</b> ${CHARACTERS[p.character].name}${p.kind === "bot" ? " (bot)" : ""}</td>
+      return `<tr><td><b style="color:${SEAT_COLORS[p.slot]}">${i + 1}. ${SEAT_NAMES[p.slot]}</b> ${CHARACTERS[p.character].name}${p.kind === "bot" ? " (bot)" : ""}${p.team >= 0 ? ` <b style="color:${TEAM_TINTS[p.team + 1]}">${TEAM_LABELS[p.team + 1].slice(-1)}</b>` : ""}</td>
       <td>${st.kos}</td><td>${st.falls}</td><td>${st.tilesBroken + st.slabsBroken}</td><td>${st.placed}</td><td>${st.stomps}</td><td>${fmtTime(st.airTicks)}</td><td>${fmtTime(st.longestLife)}</td></tr>`;
     })
     .join("");
   return `<div class="screen results">
-    <p class="winner" style="color:${SEAT_COLORS[w.slot]}">${SEAT_NAMES[w.slot]} WINS</p>
-    <p class="sub" style="text-align:center">${CHARACTERS[w.character].name} kept their footing longest${m.result.tied ? " (a tie on the last tick, broken by credited eliminations)" : ""} · match time ${fmtTime(m.result.ticks)}</p>
+    ${
+      m.result.team >= 0
+        ? `<p class="winner" style="color:${TEAM_TINTS[m.result.team + 1]}">${TEAM_LABELS[m.result.team + 1].toUpperCase()} WINS</p>
+    <p class="sub" style="text-align:center">${m.result.winners.map((seat) => `<span style="color:${SEAT_COLORS[m.players[seat].slot]}">${SEAT_NAMES[m.players[seat].slot]}</span> ${CHARACTERS[m.players[seat].character].name}`).join(" and ")} kept their footing longest`
+        : `<p class="winner" style="color:${SEAT_COLORS[w.slot]}">${SEAT_NAMES[w.slot]} WINS</p>
+    <p class="sub" style="text-align:center">${CHARACTERS[w.character].name} kept their footing longest`
+    }${m.result.tied ? " (a tie on the last tick, broken by credited eliminations)" : ""} · match time ${fmtTime(m.result.ticks)}</p>
     <div class="awards">${awards(m)
       .map((a) => `<div class="award">${a}</div>`)
       .join("")}</div>
@@ -527,6 +545,7 @@ function setupInput(code, actions, d) {
   }
   if (code === "Enter" || code === "NumpadEnter") {
     if (settings.seats.filter((s) => s.kind !== "off").length < 2) return sfx.fizzle(), toast("Add at least two players or bots");
+    if (teamProblem()) return sfx.fizzle(), toast(teamProblem());
     sfx.confirm();
     return show("stage");
   }
@@ -537,6 +556,7 @@ function setupInput(code, actions, d) {
         s.kind = "human";
         sfx.confirm();
       } else if (settings.seats.filter((x) => x.kind !== "off").length >= 2) {
+        if (teamProblem()) return sfx.fizzle(), toast(teamProblem());
         sfx.confirm();
         save();
         return show("stage");
@@ -549,6 +569,12 @@ function setupInput(code, actions, d) {
         sfx.back();
         return show("title");
       }
+    } else if (action === "trick" && s.kind !== "off") {
+      s.team = ((s.team || 0) + 1) % 3;
+      sfx.menu();
+    } else if ((action === "up" || action === "down") && s.kind !== "off") {
+      s.handicap = Math.max(-2, Math.min(2, (s.handicap || 0) + (action === "up" ? 1 : -1)));
+      sfx.menu();
     } else if ((action === "left" || action === "right") && s.kind !== "off") {
       const i = CHARACTER_IDS.indexOf(s.character);
       const n = CHARACTER_IDS.length;

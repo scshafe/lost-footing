@@ -22,6 +22,16 @@ export function currentBlame(state, p) {
   return null;
 }
 
+// Teams: a player's team is their config team, or their own seat when they
+// play alone. Same team = never opponents.
+export function teamOf(p) {
+  return p.team >= 0 ? p.team : 100 + p.seat;
+}
+
+export function sameTeam(a, b) {
+  return teamOf(a) === teamOf(b);
+}
+
 export function creditBreak(state, seat, tile) {
   const p = state.players[seat];
   if (!p) return;
