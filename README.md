@@ -69,9 +69,12 @@ with its own Place key, changes character with its left/right keys and leaves
 with its Break key; number keys 1 to 4 add a bot to that seat (press again
 for hard, easy, off). The Trick key sets a team (solo, A or B: a team wins
 together) and up/down give a handicap of up to two stocks either way. The
-Controls screen has a key tester and lets you rebind keys (Enter to edit):
-keyboards cannot report every combination of keys held at once (ghosting), so
+Controls screen has a key tester and lets you rebind keys (Enter to edit).
+Keyboards cannot report every combination of keys held at once (ghosting), so
 check yours there.
+
+Every match is recorded: Results has Watch replay and Save replay, and the
+title screen can load a saved replay file.
 
 ## Build and test
 
