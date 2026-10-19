@@ -55,7 +55,7 @@ function stressAt(seg, x) {
   let worst = 0;
   for (const t of seg.tiles) {
     if (x + 30 < t.x || x - 30 > t.x + t.w) continue;
-    const s = t.kind === "crumble" ? t.stress : t.kind === "decoy" && t.life < 90 ? 0.9 : t.kind === "ledge" || t.kind === "halo" || t.kind === "decoy" ? 0.3 : 0;
+    const s = t.kind === "crumble" ? t.stress : t.kind === "decoy" && t.life < 90 ? 0.9 : t.kind === "ledge" || t.kind === "halo" || t.kind === "decoy" || t.kind === "leaf" ? 0.3 : 0;
     if (s > worst) worst = s;
   }
   return worst;
@@ -70,11 +70,15 @@ function danger(state, seg, x, top, me) {
   if (width < 100) d += (100 - width) / 50;
   d += Math.min(x - seg.x0, seg.x1 - x) < 30 ? 0.6 : 0;
   for (const o of state.objects) {
-    if (o.type === "coat" && o.y === top && x > o.x0 - 20 && x < o.x1 + 20) d += o.coat === "acid" ? 6 : o.coat === "glue" ? 4 : 2.5;
+    if (o.type === "coat" && o.y === top && x > o.x0 - 20 && x < o.x1 + 20) d += o.coat === "acid" ? 6 : o.coat === "glue" ? 4 : o.coat === "thorn" ? 3.5 : 2.5;
     else if (o.type === "charge") {
       const dx = o.x - x;
       const dy = o.y - top;
       if (dx * dx + dy * dy < 130 * 130) d += 6;
+    } else if (o.type === "roots") {
+      const dx = o.x - x;
+      const dy = o.top - 6 - top;
+      if (dx * dx + dy * dy < 140 * 140) d += 5;
     } else if (o.type === "saw" && o.onTop === top && (x - o.x) * o.dir > 0 && Math.abs(x - o.x) < 400) d += 2.5;
     else if (o.type === "spring" && o.owner !== me.seat && top === o.y + o.h && Math.abs(o.x + o.w / 2 - x) < 50) d += 2;
     else if (o.type === "gust" && o.owner !== me.seat) {
@@ -530,6 +534,27 @@ function planMove(state, p, name, opps, segs, lv) {
     }
     case "Decoy":
       return null; // recovery only (see recover)
+    case "Vine":
+      return null; // a ladder, for people
+    case "Thorns": {
+      if (!grounded) return null;
+      for (const q of opps) {
+        if (!q.ground || q.ground.kind !== "tile" || Math.abs(q.groundTop - p.groundTop) > 4) continue;
+        const dx = q.x + q.w / 2 - f.x;
+        if (Math.abs(dx) > 50 && Math.abs(dx) < 170) return { value: 2.5, extra: dirBtn(dx) };
+      }
+      return null;
+    }
+    case "Roots": {
+      if (!grounded || !lv.recoverSmart) return null;
+      for (const q of opps) {
+        if (!q.ground || q.ground.kind !== "tile") continue;
+        const dx = q.x + q.w / 2 - f.x;
+        const seedX = f.x + Math.sign(dx) * 110;
+        if (Math.abs(q.x + q.w / 2 - seedX) < 70 && Math.abs(q.groundTop - p.groundTop) < 30) return { value: 3, extra: dirBtn(dx) };
+      }
+      return null;
+    }
     case "Hollow": {
       if (!grounded) return null;
       for (const q of opps) {

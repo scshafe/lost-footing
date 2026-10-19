@@ -133,9 +133,10 @@ export const sfx = {
   },
   place(obj) {
     if (!ok("place", 30)) return;
-    const f = { wall: 140, spring: 520, gust: 300, bumper: 700, ledge: 240, decoy: 620, hollow: 330, rub: 260 }[obj] || 400;
+    const f = { wall: 140, spring: 520, gust: 300, bumper: 700, ledge: 240, decoy: 620, hollow: 330, rub: 260, vine: 480, roots: 150 }[obj] || 400;
     tone({ f, f2: f * 1.5, dur: 0.12, type: "square", vol: 0.12 });
     if (obj === "wall" || obj === "ledge") noise({ dur: 0.15, freq: 400, vol: 0.15 });
+    if (obj === "roots") noise({ dur: 0.25, freq: 250, vol: 0.15 });
     if (obj === "rub") noise({ dur: 0.3, freq: 1200, f2: 500, type: "bandpass", q: 1.5, vol: 0.12 });
   },
   throw() {
@@ -235,6 +236,14 @@ export const sfx = {
     [523, 659, 784, 1047].forEach((f, i) => tone({ f, dur: 0.25, type: "square", vol: 0.12, delay: i * 0.13 }));
     tone({ f: 1047, dur: 0.7, type: "triangle", vol: 0.15, delay: 0.55 });
   },
+  grow() {
+    if (ok("grow", 70)) tone({ f: 400, f2: 700, dur: 0.12, type: "sine", vol: 0.1 });
+  },
+  rootBurst() {
+    if (!ok("rootBurst", 100)) return;
+    noise({ dur: 0.35, freq: 220, f2: 80, vol: 0.3 });
+    tone({ f: 120, f2: 60, dur: 0.25, type: "square", vol: 0.12 });
+  },
   fooled() {
     if (ok("fooled", 60)) tone({ f: 700, f2: 180, dur: 0.3, type: "triangle", vol: 0.15 });
   },
@@ -318,6 +327,10 @@ export function playEvent(e) {
       return sfx.overtime();
     case "win":
       return sfx.win();
+    case "grow":
+      return sfx.grow();
+    case "rootBurst":
+      return sfx.rootBurst();
     case "fooled":
       return sfx.fooled();
     case "hollow":

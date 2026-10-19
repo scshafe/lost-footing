@@ -12,7 +12,7 @@ export const VIEW = { w: 1600, h: 980 }; // the world (900 tall) plus a HUD stri
 export const SEAT_COLORS = ["#ff5a5f", "#4aa8ff", "#4fdc7b", "#ffc23d"];
 export const SEAT_DARK = ["#9e2328", "#1d5d9e", "#1f8a45", "#a3740f"];
 export const SEAT_NAMES = ["P1", "P2", "P3", "P4"];
-const COAT_COLORS = { glue: "#e4f05a", oil: "#3a2b5c", acid: "#7dff4f" };
+const COAT_COLORS = { glue: "#e4f05a", oil: "#3a2b5c", acid: "#7dff4f", thorn: "#4a9a3a" };
 const CAUSE_TEXT = {
   fall: "fell",
   side: "flew off",
@@ -149,6 +149,15 @@ export class Renderer {
         case "reflect":
           this.ring(e.x, e.y, "#ffffff", 34, 12);
           this.sparks(e.x, e.y, 8);
+          break;
+        case "grow":
+          this.sparks(e.x, e.y, 3);
+          this.dust(e.x, e.y + 4, 3, "#49b04a88");
+          break;
+        case "rootBurst":
+          this.debris(e.x, e.y, 16, theme.tile, e.r);
+          this.ring(e.x, e.y - 6, "#6bb046", e.r, 18);
+          this.addShake(8);
           break;
         case "fooled":
           this.ring(e.x, e.y, this.col(e.owner) || "#fff", 34, 14);
@@ -377,6 +386,7 @@ export class Renderer {
       } else if (t.kind === "decoy") this.drawDecoy(t, theme);
       else if (t.kind === "sturdy") this.drawSlab(t, theme);
       else if (t.kind === "ledge") this.drawLedge(t);
+      else if (t.kind === "leaf") this.drawLeaf(t);
       else if (t.kind === "halo") this.drawHalo(t);
       ctx.restore();
     }
@@ -484,6 +494,25 @@ export class Renderer {
     ctx.fillStyle = c;
     ctx.fillRect(-t.w / 2 + 1, -t.h / 2, t.w - 2, t.h);
     ctx.restore();
+  }
+
+  drawLeaf(t) {
+    const { ctx } = this;
+    const wilt = t.life < 60 ? t.life / 60 : 1;
+    ctx.globalAlpha *= 0.5 + 0.5 * wilt;
+    ctx.fillStyle = wilt < 1 ? "#a9a24a" : "#49b04a";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, t.w / 2, t.h / 2 + 1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#1f6b2a";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-t.w / 2 + 6, 0);
+    ctx.lineTo(t.w / 2 - 6, 0);
+    ctx.stroke();
+    ctx.fillStyle = this.col(t.owner) || "#fff";
+    ctx.fillRect(-2, -t.h / 2, 4, 3);
   }
 
   drawLedge(t) {
@@ -656,6 +685,49 @@ export class Renderer {
           ctx.fillRect(o.x + 2, o.y + 1, o.w - 4, 3);
           break;
         }
+        case "vine": {
+          // The seed, then a shoot bending toward where the next leaf will come.
+          const k = o.step === 0 ? 1 - o.fuse / OBJ.vine.delay : 1;
+          ctx.fillStyle = "#6b4a2b";
+          ctx.beginPath();
+          ctx.ellipse(o.x, o.top - 3, 6, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#49b04a";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(o.x, o.top - 4);
+          ctx.quadraticCurveTo(o.x + o.dir * 6, o.top - 16 * k - 8, o.x, o.top - 14 - 40 * k);
+          ctx.stroke();
+          ctx.fillStyle = c;
+          ctx.fillRect(o.x - 3, o.top - 2, 6, 2);
+          break;
+        }
+        case "roots": {
+          const k = 1 - o.fuse / OBJ.roots.fuse;
+          const r = OBJ.roots.r;
+          ctx.strokeStyle = `rgba(110,180,70,${0.35 + 0.4 * k})`;
+          ctx.setLineDash([8, 6]);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(o.x, o.top - 6, r * (0.55 + 0.45 * k), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#6b4a2b";
+          ctx.beginPath();
+          ctx.ellipse(o.x, o.top - 3, 5 + 6 * k, 3 + 3 * k, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#8a5f33";
+          ctx.lineWidth = 3;
+          for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(o.x, o.top - 3);
+            ctx.lineTo(o.x + i * 14 * k, o.top + 6 + 4 * k);
+            ctx.stroke();
+          }
+          ctx.fillStyle = c;
+          ctx.fillRect(o.x - 3, o.top - 2, 6, 2);
+          break;
+        }
         case "rub": {
           const k = 1 - o.fuse / OBJ.rub.delay;
           const w = o.x1 - o.x0;
@@ -748,6 +820,20 @@ export class Renderer {
       ctx.fill();
       ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.fillRect(o.x0 + ((this.frame * 2) % Math.max(1, w - 10)), o.y - 3, 10, 1);
+    } else if (o.coat === "thorn") {
+      const grow = o.armed > 0 ? 1 - o.armed / OBJ.thorn.arm : 1;
+      ctx.fillStyle = "#2f6b2a";
+      ctx.fillRect(o.x0, o.y - 3, w, 3);
+      ctx.strokeStyle = COAT_COLORS.thorn;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = o.x0 + 4; x < o.x1 - 2; x += 9) {
+        const hgt = (8 + ((x * 7) % 6)) * grow;
+        ctx.moveTo(x - 3, o.y - 2);
+        ctx.lineTo(x, o.y - 2 - hgt);
+        ctx.lineTo(x + 3, o.y - 2);
+      }
+      ctx.stroke();
     } else {
       ctx.fillStyle = COAT_COLORS.acid;
       roundRect(ctx, o.x0, o.y - 4, w, 7, 3);
@@ -913,6 +999,23 @@ export class Renderer {
         ctx.beginPath();
         ctx.arc(sway * 1.5, top - 16, 4, 0, Math.PI * 2);
         ctx.fill();
+        break;
+      }
+      case "fern": {
+        // A sprout of two leaves on top.
+        ctx.strokeStyle = "#2f7a33";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, top);
+        ctx.lineTo(0, top - 7);
+        ctx.stroke();
+        ctx.fillStyle = "#49b04a";
+        const sway = Math.sin(this.frame * 0.15) * 1.5;
+        for (const d of [-1, 1]) {
+          ctx.beginPath();
+          ctx.ellipse(d * 6 + sway, top - 9, 6, 3, d * -0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
         break;
       }
       case "dab": {
