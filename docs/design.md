@@ -400,5 +400,10 @@ amplitudes, reversal rhythm) are first guesses.
 
 ## Ideas not yet built
 
-- Online play (lockstep or rollback over the deterministic simulation).
-- Gamepad support (the brief says keyboard only, so this needs the owner's say).
+- Online play (lockstep or rollback over the deterministic simulation). Out of
+  scope here; it moved to the ledgefall project.
+
+## Decided against
+
+- Gamepad support. Decided by the owner (2026-10-19): keys only, as the brief
+  says. Controllers belong to ledgefall.
