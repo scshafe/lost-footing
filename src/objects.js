@@ -28,6 +28,7 @@ export const OBJ = Object.freeze({
   vine: { leaves: 4, rise: 64, off: 38, w: 56, h: 12, life: 420, delay: 30, grow: 12, max: 2 },
   thorn: { w: 150, life: 300, max: 2, stress: 1 / 130, arm: 24, near: 30 },
   roots: { r: 125, fuse: 60, max: 1 },
+  magnet: { r: 18, pull: 240, life: 300, max: 1, arm: 10, strength: 0.5, hold: 24, flip: 150, burst: 11, maxSpeed: 14 },
 });
 
 export function addObject(state, o) {
@@ -71,6 +72,75 @@ function objectSurfaces(state) {
     list.push({ kind: "obj", id: o.id, top: o.y, x0: o.x, x1: o.x + o.w });
   }
   return list;
+}
+
+// Lodestones (Ferro) pull loose metal toward them, or push it away while
+// flipped. Returns the net pull on a point, the lodestone behind it, and the
+// lodestone holding it if it is close enough to hang there.
+export function magnetPull(state, x, y) {
+  let ax = 0;
+  let ay = 0;
+  let by = null;
+  let held = null;
+  const M = OBJ.magnet;
+  for (const m of state.objects) {
+    if (m.type !== "magnet" || m.dead || m.armed > 0) continue;
+    const dx = m.x - x;
+    const dy = m.y - y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > M.pull) continue;
+    const dir = m.mode === "push" ? -1 : 1;
+    if (dir > 0 && d < M.hold) held = m;
+    if (d < 1) continue;
+    const a = (M.strength * (1 - d / M.pull) + 0.12) * dir;
+    ax += (a * dx) / d;
+    ay += (a * dy) / d;
+    by = m;
+  }
+  return by ? { ax, ay, by, held } : null;
+}
+
+// What a lodestone pulls becomes its owner's: so does the credit for what it does next.
+function adopt(o, m) {
+  o.owner = m.owner;
+}
+
+const capSpeed = (v) => Math.max(-OBJ.magnet.maxSpeed, Math.min(OBJ.magnet.maxSpeed, v));
+
+// Ferro flips her lodestone: for 2.5 s it pushes, and everything loose within
+// reach is thrown away from it at once.
+export function magnetFlip(state, m) {
+  const M = OBJ.magnet;
+  m.mode = "push";
+  m.modeTimer = M.flip;
+  for (const o of state.objects) {
+    if (o.dead || o === m) continue;
+    const cx = o.w ? o.x + o.w / 2 : o.x;
+    const cy = o.h ? o.y + o.h / 2 : o.y;
+    const dx = cx - m.x;
+    const dy = cy - m.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    if (d > M.pull) continue;
+    const vx = (dx / d) * M.burst;
+    const vy = (dy / d) * M.burst;
+    if (o.type === "anvil") {
+      o.resting = -1;
+      o.vx = vx;
+      o.vy = vy;
+    } else if (o.type === "lob" || o.type === "bumper") {
+      o.vx = vx;
+      o.vy = vy;
+    } else if (o.type === "charge") {
+      o.sup = -1;
+      o.supObj = -1;
+      o.vx = vx;
+      o.vy = vy;
+    } else if (o.type === "saw") {
+      o.dir = dx < 0 ? -1 : 1;
+    } else continue;
+    adopt(o, m);
+  }
+  addEvent(state, { type: "polarity", x: m.x, y: m.y, r: M.pull, owner: m.owner });
 }
 
 // Box objects (walls, springs, anvils): stay on their support or fall.
@@ -138,6 +208,12 @@ function lobStep(l, surfs, state) {
     if (g.type !== "gust" || g.dead || g.armed > 0) continue;
     const d = (l.x - g.x) * g.dir;
     if (d >= 0 && d <= g.len && l.y > g.y - g.hh && l.y < g.y + g.hh) nvx += g.dir * 0.12;
+  }
+  // Lodestones bend them.
+  const mg = magnetPull(state, l.x, l.y);
+  if (mg) {
+    nvx += mg.ax;
+    nvy += mg.ay;
   }
   if (nvy >= 0) {
     let best = null;
@@ -215,7 +291,7 @@ export function explode(state, o, cx, cy) {
     if (q === o || q.dead) continue;
     if (q.type === "wall" || q.type === "spring" || q.type === "anvil" || q.type === "charge") {
       if (circleBox(cx, cy, R, q.x, q.y, q.w, q.h)) q.dead = true;
-    } else if (q.type === "bumper") {
+    } else if (q.type === "bumper" || q.type === "magnet") {
       const dx = q.x - cx;
       const dy = q.y - cy;
       if (dx * dx + dy * dy < (R + q.r) * (R + q.r)) q.dead = true;
@@ -309,6 +385,7 @@ export function updateObjects(state) {
         break;
       }
       case "bumper": {
+        moveFloater(state, o);
         if (--o.life <= 0) o.dead = true;
         if (o.armed > 0 || o.dead) break;
         for (const p of players) {
@@ -341,6 +418,8 @@ export function updateObjects(state) {
         break;
       }
       case "lob": {
+        const mg = magnetPull(state, o.x, o.y);
+        if (mg) adopt(o, mg.by);
         const r = lobStep(o, surfs, state);
         if (r.land) {
           o.dead = true;
@@ -355,7 +434,30 @@ export function updateObjects(state) {
         break;
       }
       case "charge": {
-        settle(state, o, surfs);
+        const mg = magnetPull(state, o.x + o.w / 2, o.y + o.h / 2);
+        if (mg) {
+          // Pulled loose: it flies to the lodestone and hangs there.
+          adopt(o, mg.by);
+          o.sup = -1;
+          o.supObj = -1;
+          if (mg.held) {
+            o.x = mg.held.x - o.w / 2;
+            o.y = mg.held.y - o.h / 2;
+            o.vx = 0;
+            o.vy = 0;
+          } else {
+            o.vx = capSpeed((o.vx + mg.ax) * 0.95);
+            o.vy = capSpeed((o.vy + mg.ay) * 0.95);
+            o.x += o.vx;
+            o.y += o.vy;
+          }
+        } else {
+          if (o.vx !== 0) {
+            o.x += o.vx;
+            o.vx = Math.abs(o.vx) < 0.05 ? 0 : o.vx * 0.9;
+          }
+          settle(state, o, surfs);
+        }
         if (o.y > 1100) {
           o.dead = true;
           break;
@@ -397,6 +499,11 @@ export function updateObjects(state) {
         o.dead = true;
         rootsShake(state, o, true);
         surfs = objectSurfaces(state);
+        break;
+      }
+      case "magnet": {
+        if (--o.life <= 0) o.dead = true;
+        if (o.mode === "push" && --o.modeTimer <= 0) o.mode = "pull";
         break;
       }
       case "rub": {
@@ -457,6 +564,30 @@ function rubOut(state, o) {
   addEvent(state, { type: "rubOut", x0: o.x0, x1: o.x1, y: o.y, owner: o.owner });
 }
 
+// A floating bumper drifts to a lodestone (and hangs on it), or coasts to a stop.
+function moveFloater(state, o) {
+  const mg = magnetPull(state, o.x, o.y);
+  if (mg) {
+    adopt(o, mg.by);
+    if (mg.held) {
+      o.x = mg.held.x;
+      o.y = mg.held.y;
+      o.vx = 0;
+      o.vy = 0;
+      return;
+    }
+    o.vx = capSpeed((o.vx + mg.ax) * 0.92);
+    o.vy = capSpeed((o.vy + mg.ay) * 0.92);
+  } else {
+    o.vx *= 0.9;
+    o.vy *= 0.9;
+    if (Math.abs(o.vx) < 0.05) o.vx = 0;
+    if (Math.abs(o.vy) < 0.05) o.vy = 0;
+  }
+  o.x += o.vx;
+  o.y += o.vy;
+}
+
 function gustPush(state, x, y) {
   let ax = 0;
   for (const g of state.objects) {
@@ -477,6 +608,21 @@ function springUnder(state, x0, x1, bottom) {
 }
 
 function updateAnvil(state, o, surfs) {
+  const mg = magnetPull(state, o.x + o.w / 2, o.y + o.h / 2);
+  if (mg) {
+    // Iron: a lodestone lifts it off the floor and carries it.
+    adopt(o, mg.by);
+    o.resting = -1;
+    if (mg.held) {
+      o.x = mg.held.x - o.w / 2;
+      o.y = mg.held.y - o.h / 2;
+      o.vx = 0;
+      o.vy = 0;
+      return;
+    }
+    o.vx = capSpeed((o.vx + mg.ax) * 0.95);
+    o.vy = capSpeed((o.vy + mg.ay - OBJ.gravity) * 0.95);
+  }
   if (o.resting >= 0) {
     settle(state, o, surfs);
     if (--o.resting <= 0 || o.y > 1100) o.dead = true;
@@ -528,7 +674,7 @@ function updateAnvil(state, o, surfs) {
         o.resting = OBJ.anvil.restLife;
         return;
       }
-      if (o.breaks >= OBJ.anvil.maxBreaks) {
+      if (o.breaks >= (o.maxBreaks ?? OBJ.anvil.maxBreaks)) {
         o.dead = true;
         addEvent(state, { type: "anvilBreak", x: o.x + o.w / 2, y: top });
         return;
@@ -561,6 +707,11 @@ function updateSaw(state, o, surfs) {
     // A strong enough gust turns a saw around.
     o.dir = sign(g);
     o.redirectedBy = -1;
+  }
+  const mg = magnetPull(state, o.x, o.y);
+  if (mg) {
+    adopt(o, mg.by);
+    if (o.age % 20 === 0 && Math.abs(mg.ax) > 0.02) o.dir = sign(mg.ax);
   }
   const nx = o.x + o.dir * speed;
   // Walls and bumpers reflect it.

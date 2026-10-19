@@ -7,7 +7,7 @@ import { BTN, MOVE_BUTTONS } from "./input.js";
 import { addEvent, overlaps } from "./common.js";
 import { addTempTile, getTile, isSolid, isFloor, breakTile, damageTile, stressTile } from "./tiles.js";
 import { HOLLOW, TILE } from "./constants.js";
-import { OBJ, addObject, limitOwned, makeCoat, springLaunchSelf, bumperBounce } from "./objects.js";
+import { OBJ, addObject, limitOwned, makeCoat, magnetFlip, springLaunchSelf, bumperBounce } from "./objects.js";
 
 // Throw velocity: neutral, forward held (far), up held (high lob).
 export function lobVelocity(p, btn = p.btn) {
@@ -80,10 +80,12 @@ function castLedge(state, p) {
   return true;
 }
 
-function castAnvil(state, p) {
+function throwAnvil(state, p, maxBreaks, ingot) {
   const { w, h } = OBJ.anvil;
   addObject(state, {
     type: "anvil",
+    ingot,
+    maxBreaks,
     owner: p.seat,
     x: p.x + p.w / 2 - w / 2 + p.facing * 12,
     y: p.y - 12,
@@ -97,6 +99,8 @@ function castAnvil(state, p) {
   addEvent(state, { type: "throw", payload: "anvil", seat: p.seat, x: p.x + p.w / 2, y: p.y });
   return true;
 }
+
+const castAnvil = (state, p) => throwAnvil(state, p, OBJ.anvil.maxBreaks, false);
 
 // ---- Pip ----------------------------------------------------------------
 
@@ -344,6 +348,27 @@ function castRoots(state, p) {
   return true;
 }
 
+// ---- Ferro --------------------------------------------------------------
+
+function castLodestone(state, p) {
+  const M = OBJ.magnet;
+  limitOwned(state, p.seat, (o) => o.type === "magnet", M.max);
+  const x = p.x + p.w / 2 + p.facing * 70;
+  const y = p.y + p.h / 2 - 24;
+  addObject(state, { type: "magnet", owner: p.seat, x, y, r: M.r, life: M.life, armed: M.arm, mode: "pull", modeTimer: 0 });
+  addEvent(state, { type: "place", obj: "magnet", seat: p.seat, x, y });
+  return true;
+}
+
+function castPolarity(state, p) {
+  const m = state.objects.find((o) => o.type === "magnet" && o.owner === p.seat && !o.dead && o.armed === 0);
+  if (!m) return false; // nothing to flip
+  magnetFlip(state, m);
+  return true;
+}
+
+const castIngot = (state, p) => throwAnvil(state, p, 1, true);
+
 // ---- The roster ---------------------------------------------------------
 
 export const CHARACTERS = {
@@ -418,6 +443,18 @@ export const CHARACTERS = {
       { name: "Vine", cd: 330, cast: castVine, desc: "A seed ahead sprouts a zigzag ladder of four leaves, 7 s. Anyone can climb it. 2 at once." },
       { name: "Thorns", cd: 240, cast: castThorns, desc: "A bramble patch ahead after a moment's growth: slow and stuck on it, and it chews the tiles under it. 5 s." },
       { name: "Roots", cd: 330, cast: castRoots, desc: "A seed ahead: the tiles around it shake for a second, then break. Slabs take 1 damage." },
+    ],
+  },
+  ferro: {
+    id: "ferro",
+    name: "Ferro",
+    title: "the magnetist",
+    trait: "Takes what she pulls: loose metal a lodestone catches becomes hers, and so does the credit.",
+    blurb: "A lodestone that drags anvils, saws, charges and bumpers to it, a flip that hurls them away, and an iron bar to break a tile.",
+    moves: [
+      { name: "Lodestone", cd: 150, cast: castLodestone, desc: "A floating magnet ahead, 5 s. Pulls loose metal (anvils, saws, charges, lobs, bumpers) toward it and holds it. 1 at once." },
+      { name: "Polarity", cd: 360, cast: castPolarity, desc: "Flips your lodestone for 2.5 s: everything loose near it is thrown away at once and kept away." },
+      { name: "Ingot", cd: 210, cast: castIngot, desc: "A thrown iron bar. Breaks the first tile it lands on, or cracks a slab." },
     ],
   },
 };
