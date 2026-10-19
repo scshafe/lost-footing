@@ -22,11 +22,15 @@ export function newBotMemory() {
 // ---- Reading the stage --------------------------------------------------
 
 // Contiguous runs of solid tiles at one height: what a bot can stand on.
-function segments(state, seat) {
+// Bots see another player's hollow tiles shimmer; only hard bots see through
+// a decoy.
+function segments(state, seat, seesDecoys = false) {
   const byTop = new Map();
   for (const t of state.tiles) {
     if (t.state !== "solid") continue;
     if (t.kind === "halo" && t.owner !== seat) continue;
+    if (t.kind === "decoy" && t.owner !== seat && seesDecoys) continue;
+    if ((t.hollow > 0 || t.hollowArm > 0) && t.hollowBy !== seat) continue;
     if (!byTop.has(t.y)) byTop.set(t.y, []);
     byTop.get(t.y).push(t);
   }
@@ -51,7 +55,7 @@ function stressAt(seg, x) {
   let worst = 0;
   for (const t of seg.tiles) {
     if (x + 30 < t.x || x - 30 > t.x + t.w) continue;
-    const s = t.kind === "crumble" ? t.stress : t.kind === "ledge" || t.kind === "halo" ? 0.3 : 0;
+    const s = t.kind === "crumble" ? t.stress : t.kind === "decoy" && t.life < 90 ? 0.9 : t.kind === "ledge" || t.kind === "halo" || t.kind === "decoy" ? 0.3 : 0;
     if (s > worst) worst = s;
   }
   return worst;
@@ -187,7 +191,7 @@ export function botButtons(state, seat) {
   const mem = state.bots[seat];
   if (!mem || p.status !== "play") return 0;
   const lv = LEVELS[p.difficulty] || LEVELS.normal;
-  const segs = segments(state, seat);
+  const segs = segments(state, seat, p.difficulty === "hard");
   const f = feet(p);
 
   // Edge-guard: notice an opponent trying to get back on stage.
@@ -319,7 +323,7 @@ function recover(state, p, mem, segs, f, btn, lv) {
   if (falling && (lost || tideDanger)) {
     if (p.jumpsLeft > 0) mem.wantAirJump = true;
     else if (lv.recoverSmart && p.cd[1] === 0 && p.character === "mason" && f.y > 300) return (btn & ~BTN.UP) | BTN.TRICK;
-    else if (lv.recoverSmart && p.cd[0] === 0 && (p.character === "pip" || p.character === "fuse")) return btn | BTN.PLACE;
+    else if (lv.recoverSmart && p.cd[0] === 0 && (p.character === "pip" || p.character === "fuse" || p.character === "dab")) return btn | BTN.PLACE;
   }
   // Toward the stage when far out.
   if (f.x < 120) btn = (btn & ~BTN.LEFT) | BTN.RIGHT;
@@ -521,6 +525,26 @@ function planMove(state, p, name, opps, segs, lv) {
         const seg = q.ground && q.ground.kind === "tile" ? segs.find((s) => s.top === q.groundTop && qx >= s.x0 && qx <= s.x1) : null;
         const edge = seg ? (dir > 0 ? seg.x1 - qx : qx - seg.x0) : 999;
         if (!q.ground || edge < 140) return { value: 2.5, extra: dirBtn(dx) };
+      }
+      return null;
+    }
+    case "Decoy":
+      return null; // recovery only (see recover)
+    case "Hollow": {
+      if (!grounded) return null;
+      for (const q of opps) {
+        if (!q.ground || q.ground.kind !== "tile" || Math.abs(q.groundTop - p.groundTop) > 4) continue;
+        const dx = q.x + q.w / 2 - f.x;
+        if (Math.abs(dx) > 40 && Math.abs(dx) < 140) return { value: 3, extra: dirBtn(dx) };
+      }
+      return null;
+    }
+    case "Rub out": {
+      if (!grounded) return null;
+      for (const q of opps) {
+        if (!q.ground || Math.abs(q.groundTop - p.groundTop) > 4) continue;
+        const dx = q.x + q.w / 2 - f.x;
+        if (Math.abs(dx) > 50 && Math.abs(dx) < 180 && q.vx * dx <= 0.5) return { value: 2.5, extra: dirBtn(dx) };
       }
       return null;
     }

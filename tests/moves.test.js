@@ -34,8 +34,9 @@ test("every move has a cooldown: it cannot be spammed", () => {
   for (const id of Object.keys(CHARACTERS)) {
     for (let slot = 0; slot < 3; slot++) {
       const s = match(id);
-      const p = stand(s, 0, 8);
-      p.facing = 1;
+      const gap = id === "dab" && slot === 0; // Dab's decoy needs a gap to paint over
+      const p = stand(s, 0, gap ? 0 : 8);
+      p.facing = gap ? -1 : 1;
       assert.ok(cast(s, slot), `${id} move ${slot} casts`);
       assert.ok(p.cd[slot] >= 60, `${id} move ${slot} has a cooldown of at least a second`);
       p.drill = 0;
@@ -48,10 +49,11 @@ test("no move touches another player directly", () => {
   for (const id of Object.keys(CHARACTERS)) {
     for (let slot = 0; slot < 3; slot++) {
       const s = match(id);
-      const p = stand(s, 0, 8);
-      p.facing = 1;
+      const gap = id === "dab" && slot === 0;
+      const p = stand(s, 0, gap ? 0 : 8);
+      p.facing = gap ? -1 : 1;
       const q = stand(s, 1, 9);
-      q.x = p.x + 30; // right in front
+      q.x = p.x + 30 * p.facing; // right in front
       step(s, []);
       cast(s, slot);
       for (let i = 0; i < 8; i++) {

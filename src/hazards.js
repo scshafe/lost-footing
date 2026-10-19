@@ -6,7 +6,7 @@
 import { PLAYER } from "./constants.js";
 import { rand, randInt, randRange } from "./rng.js";
 import { addEvent, blame, circleBox, sign } from "./common.js";
-import { isSolid, breakTile, damageTile } from "./tiles.js";
+import { isSolid, isFloor, breakTile, damageTile } from "./tiles.js";
 
 export const HAZ = Object.freeze({
   comet: { r: 26, knockX: 15, knockY: -7, hitCool: 30 },
@@ -181,7 +181,7 @@ function updateRock(state, r) {
   }
   if (!r.dead) {
     for (const t of state.tiles) {
-      if (!isSolid(t) || t.kind === "halo") continue;
+      if (!isFloor(t)) continue;
       if (!circleBox(r.x, r.y, r.r, t.x, t.y, t.w, t.h)) continue;
       if (t.kind === "crumble") breakTile(state, t, -1, "rock");
       else damageTile(state, t, 2, -1, "rock");

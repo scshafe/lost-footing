@@ -17,6 +17,7 @@ you keep moving so your own ground holds.
 - [Core rules](#core-rules)
 - [Crumble platforms](#crumble-platform)
 - [Sturdy platforms](#sturdy-platform)
+- [Forged floor](#forged-floor)
 - [Movement](#movement)
 - [Vertical contact](#vertical-contact)
 - [Placeables and moves](#placeable)
@@ -77,6 +78,23 @@ They have hit points (4, or 8 for the Quarry's great ledge). Moves and hazards
 damage them; at 0 they shatter, stay gone for 8 s, then come back whole. Every
 stage pairs its slabs with a hazard that crosses them on a rhythm, so a slab is
 a place to rest between dangers, never a place to camp.
+
+## Forged floor
+
+<a id="forged-floor"></a>
+Dab's tricks make floor that holds only her. Everyone else sees an ordinary
+crumble tile with a faint wash of her colour pulsing along it, and falls
+through.
+
+- A **decoy** is a temporary tile (96 x 18, 5 s, two at once) that is solid
+  for Dab alone. Other players pass through it; objects (anvils, lobs, saws,
+  rocks, charges) ignore it. Anyone who drops through one is credited to Dab.
+- A **hollow tile** is a real crumble tile that Dab has turned: it shimmers for
+  0.4 s, then for 2.5 s holds only Dab. Whoever is standing on it when it gives
+  way is credited to Dab. It is still a normal tile for objects.
+- Neither can be told from real floor except by the tell, so they are the
+  game's one deliberate piece of hidden information. Bots see hollow tiles'
+  shimmer; hard bots also see decoys.
 
 ## Movement
 
@@ -145,6 +163,8 @@ Move keys are the same role for everyone:
 | **Pip**, the acrobat (air spring) | **Spring**: a pad ahead of you. Launches whoever steps on it up (-17), or diagonally (-15 up, 8 sideways) if you held a direction when placing. Placed in the air it appears under you and launches you (-13.5) in place of your air jump. Arms in 0.25 s, 4 uses, 8 s, 2 at once, cd 1.8 s. | **Gust**: a fan that blows 340 px ahead for 3 s (0.27 px/tick² at the fan, half at the far end) after a 0.4 s spin-up. 1 at once, cd 8 s. | **Drill**: dive straight down (hop first if grounded); the tiles you land on break, neighbours within 140 px take +0.4 stress, slabs take 2 damage; you bounce up. An air jump cancels the dive. cd 4.5 s. |
 | **Fuse**, the demolitionist (air bumper) | **Bumper**: a floating bumper ahead that bounces anyone who touches it away at 11.5 px/tick. Arms in 0.5 s, 4 bounces, 7 s, 2 at once, cd 2.2 s. Placed while falling, it appears underfoot already armed and bounces Fuse up. | **Charge**: a lobbed sticky charge; after 1.7 s of beeping it breaks every tile within 115 px, does 2 damage to slabs and destroys placeables, cd 5 s. | **Saw**: a blade that rolls along surfaces at 7 px/tick for 2.2 s, dooming every crumble tile it crosses and chipping slabs; drops to lower tiers. cd 4.5 s. |
 
+| **Dab**, the forger (decoys and hollowed tiles hold only her) | **Decoy**: paints two tiles of fake floor ahead (90 px, or 150 px with forward held) at your feet's height; fizzles if it would sit on real floor. Solid for Dab only. In the air it appears under you. 5 s, 2 at once, cd 3.3 s. | **Hollow**: crumble tiles 30 to 160 px ahead on your tier shimmer for 0.4 s, then for 2.5 s hold only Dab, so anyone on them drops. cd 7 s. | **Rub out**: a 170 px brushstroke starting past the tiles you stand on; after 0.5 s every platform in it is erased (slabs take 2 damage). cd 4.5 s. |
+
 Interactions that are built in (the combination space is the point):
 
 - **Glue on crumble = a trap.** Glue makes you "still", so the tile under you
@@ -160,6 +180,10 @@ Interactions that are built in (the combination space is the point):
 - **Glue slows saws, oil speeds them up.**
 - **Stomps stress tiles**; riding someone weighs down their tile.
 - **Walls pin**: pressing into a wall keeps you "still", so your tile crumbles.
+- **Decoy + Rub out**: Dab can erase the real floor next to her decoy and walk
+  on across the gap.
+- **Hollow + a stomp or a spring**: a launched player who lands on a hollowed
+  tile drops straight through it.
 
 ## Stages and hazards
 
@@ -248,8 +272,9 @@ Each tick a bot:
    opponent's row, a drill from above, a wall or bumper in an opponent's path,
    a gust that would push someone toward an edge, and against a recovering
    opponent a bumper, wall, gust or lob at the edge they need. Its recovery
-   tools (ledge, air spring, air bumper, Glim's second air jump) come out when
-   it is falling with nothing below.
+   tools (ledge, air spring, air bumper, Dab's air decoy, Glim's second air
+   jump) come out when it is falling with nothing below. Dab's bot hollows
+   tiles under an opponent on its tier and rubs out the floor ahead of one.
 
 Three levels: **easy** (reacts in 0.4 s, rarely uses moves, misjudges throws,
 misses hazards 45% of the time, no edge-guarding), **normal** (0.2 s, misses
@@ -294,13 +319,16 @@ collapse.
   Off-screen players get an arrow at the screen edge in their colour.
 - Player colours are per seat (P1 red, P2 blue, P3 green, P4 gold); characters
   differ in silhouette (Mason's hard hat, Glim's hood, Pip's antenna, Fuse's
-  goggles and spark).
+  goggles and spark, Dab's beret).
 - Tiles jitter and redden as stress rises, crack when doomed, and fall
   tumbling; respawning tiles flicker in outline. Hazard warnings are lane
   stripes, shadows and edge arrows with a siren.
 - Human players with a lobbed move ready (Glim, Fuse's charge) see a faint
   aim arc and a landing mark; it follows the throw modifiers held (forward,
   up). The GO banner reminds everyone to keep moving.
+- Forged floor: a decoy is drawn as an ordinary tile with a slow pulse of its
+  painter's colour; hollowed tiles pulse faster while they arm. Rub out shows
+  its stroke as a dashed box that fills in as it lands.
 - Synthesized sound (WebAudio, no files), mute with M.
 - KOs flash at the blast zone in the victim's colour, shake the screen and
   post to a feed ("P1's glue → P3").
@@ -311,7 +339,7 @@ collapse.
 
 - Online play (lockstep or rollback over the deterministic simulation).
 - Gamepad support (the brief says keyboard only, so this needs the owner's say).
-- More characters: a magnet user (pulls placeables), a painter (fake platforms
-  that look solid), a gardener (vines that grow into ladders).
+- More characters: a magnet user (pulls placeables), a gardener (vines that
+  grow into ladders).
 - Moving stages (a sinking ship, a conveyor sky).
 - Team mode and handicaps; replays from recorded inputs.

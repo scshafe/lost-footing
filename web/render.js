@@ -4,7 +4,7 @@
 
 import { stageById } from "../src/stages.js";
 import { CHARACTERS, lobVelocity, lobOrigin } from "../src/characters.js";
-import { predictLob } from "../src/objects.js";
+import { predictLob, OBJ } from "../src/objects.js";
 import { CRUMBLE, MATCH, WORLD } from "../src/constants.js";
 import { shortLabel } from "./keys.js";
 
@@ -149,6 +149,17 @@ export class Renderer {
         case "reflect":
           this.ring(e.x, e.y, "#ffffff", 34, 12);
           this.sparks(e.x, e.y, 8);
+          break;
+        case "fooled":
+          this.ring(e.x, e.y, this.col(e.owner) || "#fff", 34, 14);
+          this.dust(e.x, e.y, 5, (this.col(e.owner) || "#fff") + "99");
+          break;
+        case "hollow":
+          this.dust(e.x, e.y + 8, 4, (this.col(state.tiles.find((t) => t.id === e.id)?.hollowBy) || "#fff") + "99");
+          break;
+        case "rubOut":
+          this.debris((e.x0 + e.x1) / 2, e.y + 8, 14, theme.tile, e.x1 - e.x0);
+          this.addShake(4);
           break;
         case "cast":
           this.ring(e.x, e.y + 10, this.col(e.seat) + "aa", 20, 10);
@@ -360,7 +371,10 @@ export class Renderer {
       ctx.globalAlpha = alpha;
       ctx.translate(x + t.w / 2, y + t.h / 2);
       ctx.rotate(rot);
-      if (t.kind === "crumble") this.drawCrumble(t, theme);
+      if (t.kind === "crumble") {
+        this.drawCrumble(t, theme);
+        if (t.hollowArm > 0 || t.hollow > 0) this.drawShimmer(t);
+      } else if (t.kind === "decoy") this.drawDecoy(t, theme);
       else if (t.kind === "sturdy") this.drawSlab(t, theme);
       else if (t.kind === "ledge") this.drawLedge(t);
       else if (t.kind === "halo") this.drawHalo(t);
@@ -449,6 +463,27 @@ export class Renderer {
       ctx.fillStyle = i < t.hp ? "#8dff9a" : "#55303a";
       ctx.fillRect(-w / 2 + 6 + i * 7, h / 2 + 3, 5, 3);
     }
+  }
+
+  // A decoy looks like any crumble tile; only a faint wash of its painter's colour gives it away.
+  drawDecoy(t, theme) {
+    const { ctx } = this;
+    if (t.life < 60 && Math.floor(t.life / 5) % 2 === 0) ctx.globalAlpha *= 0.55;
+    this.drawCrumble(t, theme);
+    this.drawShimmer(t, 0.5);
+  }
+
+  // The tell on forged floor: a slow pulse of the painter's colour along the tile.
+  drawShimmer(t, strength = 1) {
+    const { ctx } = this;
+    const c = this.col(t.kind === "decoy" ? t.owner : t.hollowBy) || "#fff";
+    const arming = t.hollowArm > 0;
+    const pulse = 0.5 + 0.5 * Math.sin(this.frame * (arming ? 0.5 : 0.12) + t.id);
+    ctx.save();
+    ctx.globalAlpha *= (arming ? 0.45 + 0.4 * pulse : 0.14 + 0.2 * pulse) * strength;
+    ctx.fillStyle = c;
+    ctx.fillRect(-t.w / 2 + 1, -t.h / 2, t.w - 2, t.h);
+    ctx.restore();
   }
 
   drawLedge(t) {
@@ -619,6 +654,22 @@ export class Renderer {
           ctx.stroke();
           ctx.fillStyle = "#9aa0aa";
           ctx.fillRect(o.x + 2, o.y + 1, o.w - 4, 3);
+          break;
+        }
+        case "rub": {
+          const k = 1 - o.fuse / OBJ.rub.delay;
+          const w = o.x1 - o.x0;
+          ctx.fillStyle = c;
+          ctx.globalAlpha = 0.12 + 0.3 * k;
+          ctx.fillRect(o.x0, o.y - 6, w * k, 26);
+          ctx.globalAlpha = 0.7;
+          ctx.setLineDash([10, 6]);
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(o.x0, o.y - 6, w, 26);
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 1;
+          ctx.fillRect(o.x0 + w * k - 3, o.y - 10, 6, 34);
           break;
         }
         case "gust": {
@@ -861,6 +912,19 @@ export class Renderer {
         ctx.fillStyle = "#ffe27a";
         ctx.beginPath();
         ctx.arc(sway * 1.5, top - 16, 4, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case "dab": {
+        // A beret, tilted, with a dab of paint on the cheek.
+        ctx.fillStyle = "#d6336c";
+        ctx.beginPath();
+        ctx.ellipse(-p.facing * 2, top + 1, w / 2 + 2, 6, -0.25 * p.facing, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-p.facing * 2 - 1, top - 6, 3, 4);
+        ctx.fillStyle = this.col(p.seat) || "#fff";
+        ctx.beginPath();
+        ctx.arc(p.facing * 6, top + 17, 2.5, 0, Math.PI * 2);
         ctx.fill();
         break;
       }

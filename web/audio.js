@@ -133,9 +133,10 @@ export const sfx = {
   },
   place(obj) {
     if (!ok("place", 30)) return;
-    const f = { wall: 140, spring: 520, gust: 300, bumper: 700, ledge: 240 }[obj] || 400;
+    const f = { wall: 140, spring: 520, gust: 300, bumper: 700, ledge: 240, decoy: 620, hollow: 330, rub: 260 }[obj] || 400;
     tone({ f, f2: f * 1.5, dur: 0.12, type: "square", vol: 0.12 });
     if (obj === "wall" || obj === "ledge") noise({ dur: 0.15, freq: 400, vol: 0.15 });
+    if (obj === "rub") noise({ dur: 0.3, freq: 1200, f2: 500, type: "bandpass", q: 1.5, vol: 0.12 });
   },
   throw() {
     if (ok("throw", 30)) noise({ dur: 0.12, freq: 2000, f2: 600, type: "bandpass", q: 2, vol: 0.12 });
@@ -234,6 +235,15 @@ export const sfx = {
     [523, 659, 784, 1047].forEach((f, i) => tone({ f, dur: 0.25, type: "square", vol: 0.12, delay: i * 0.13 }));
     tone({ f: 1047, dur: 0.7, type: "triangle", vol: 0.15, delay: 0.55 });
   },
+  fooled() {
+    if (ok("fooled", 60)) tone({ f: 700, f2: 180, dur: 0.3, type: "triangle", vol: 0.15 });
+  },
+  hollow() {
+    if (ok("hollow", 60)) tone({ f: 260, f2: 130, dur: 0.2, type: "sine", vol: 0.1 });
+  },
+  rubOut() {
+    if (ok("rubOut", 80)) noise({ dur: 0.25, freq: 600, f2: 150, type: "bandpass", q: 1, vol: 0.22 });
+  },
   fizzle() {
     if (ok("fizzle", 100)) tone({ f: 200, f2: 120, dur: 0.08, type: "square", vol: 0.06 });
   },
@@ -308,6 +318,12 @@ export function playEvent(e) {
       return sfx.overtime();
     case "win":
       return sfx.win();
+    case "fooled":
+      return sfx.fooled();
+    case "hollow":
+      return sfx.hollow();
+    case "rubOut":
+      return sfx.rubOut();
     case "fizzle":
       return sfx.fizzle();
   }

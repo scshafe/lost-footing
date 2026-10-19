@@ -5,7 +5,7 @@
 import { PLAYER, CRUMBLE } from "./constants.js";
 import { BTN } from "./input.js";
 import { addEvent, blame } from "./common.js";
-import { getTile } from "./tiles.js";
+import { getTile, tileOwner } from "./tiles.js";
 import { CHARACTERS } from "./characters.js";
 
 export function newStats() {
@@ -188,7 +188,7 @@ export function surfaces(state) {
   const list = [];
   for (const t of state.tiles) {
     if (t.state !== "solid") continue;
-    list.push({ kind: "tile", id: t.id, top: t.y, x0: t.x, x1: t.x + t.w, oneWay: true, owner: t.kind === "halo" ? t.owner : -1 });
+    list.push({ kind: "tile", id: t.id, top: t.y, x0: t.x, x1: t.x + t.w, oneWay: true, owner: tileOwner(t) });
   }
   for (const o of state.objects) {
     if (!o.solid) continue;

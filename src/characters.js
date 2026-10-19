@@ -5,7 +5,8 @@
 
 import { BTN, MOVE_BUTTONS } from "./input.js";
 import { addEvent, overlaps } from "./common.js";
-import { addTempTile, getTile, isSolid, breakTile, damageTile, stressTile } from "./tiles.js";
+import { addTempTile, getTile, isSolid, isFloor, breakTile, damageTile, stressTile } from "./tiles.js";
+import { HOLLOW, TILE } from "./constants.js";
 import { OBJ, addObject, limitOwned, springLaunchSelf, bumperBounce } from "./objects.js";
 
 // Throw velocity: neutral, forward held (far), up held (high lob).
@@ -36,7 +37,7 @@ function playersOverlap(state, x, y, w, h) {
 // The solid tile under a point at a given top, if any.
 function tileAtTop(state, x, top) {
   for (const t of state.tiles) {
-    if (isSolid(t) && t.kind !== "halo" && t.y === top && x >= t.x && x <= t.x + t.w) return t;
+    if (isFloor(t) && t.y === top && x >= t.x && x <= t.x + t.w) return t;
   }
   return null;
 }
@@ -251,6 +252,66 @@ function castSaw(state, p) {
   return true;
 }
 
+// ---- Dab ----------------------------------------------------------------
+
+function castDecoy(state, p) {
+  const { w, life, max, near, far } = OBJ.decoy;
+  const cx = p.x + p.w / 2;
+  let x;
+  let y;
+  if (p.ground) {
+    const fwd = p.facing > 0 ? p.btn & BTN.RIGHT : p.btn & BTN.LEFT;
+    x = cx + p.facing * (fwd ? far : near) - w / 2;
+    y = p.groundTop;
+    // Painted over real floor it would be pointless: say so.
+    let covered = 0;
+    for (const t of state.tiles) {
+      if (isFloor(t) && t.y === y) covered += Math.max(0, Math.min(x + w, t.x + t.w) - Math.max(x, t.x));
+    }
+    if (covered >= w / 2) return false;
+  } else {
+    // In the air it appears under your feet: footing only you can use.
+    x = cx - w / 2;
+    y = p.y + p.h + 2;
+  }
+  const mine = state.tiles.filter((t) => t.kind === "decoy" && t.owner === p.seat && isSolid(t) && t.life > 1);
+  while (mine.length >= max) mine.shift().life = 1;
+  addTempTile(state, { kind: "decoy", x, y, w, h: TILE.h, owner: p.seat, life, hp: 1 });
+  addEvent(state, { type: "place", obj: "decoy", seat: p.seat, x: x + w / 2, y });
+  return true;
+}
+
+function castHollow(state, p) {
+  if (!p.ground || p.ground.kind !== "tile") return false;
+  const { near, reach } = OBJ.hollow;
+  const cx = p.x + p.w / 2;
+  const a = cx + p.facing * near;
+  const b = cx + p.facing * (near + reach);
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  const targets = state.tiles.filter((t) => t.kind === "crumble" && isSolid(t) && t.y === p.groundTop && t.x < hi && t.x + t.w > lo && !(t.hollowArm > 0) && !(t.hollow > 0));
+  if (!targets.length) return false;
+  for (const t of targets) {
+    t.hollowArm = HOLLOW.arm;
+    t.hollowBy = p.seat;
+  }
+  addEvent(state, { type: "place", obj: "hollow", seat: p.seat, x: (lo + hi) / 2, y: p.groundTop });
+  return true;
+}
+
+function castRub(state, p) {
+  if (!p.ground || p.ground.kind !== "tile") return false;
+  const { near, reach, delay } = OBJ.rub;
+  const cx = p.x + p.w / 2;
+  // The stroke starts past the tiles Dab stands on: it never erases her own footing.
+  const own = p.supportTiles.map((id) => getTile(state, id)).filter(Boolean);
+  const x0 = p.facing > 0 ? Math.max(cx + near, ...own.map((t) => t.x + t.w)) : Math.min(cx - near, ...own.map((t) => t.x)) - reach;
+  limitOwned(state, p.seat, (o) => o.type === "rub", 1);
+  addObject(state, { type: "rub", owner: p.seat, x0, x1: x0 + reach, y: p.groundTop, fuse: delay });
+  addEvent(state, { type: "place", obj: "rub", seat: p.seat, x: x0 + reach / 2, y: p.groundTop });
+  return true;
+}
+
 // ---- The roster ---------------------------------------------------------
 
 export const CHARACTERS = {
@@ -301,6 +362,18 @@ export const CHARACTERS = {
       { name: "Bumper", cd: 130, cast: castBumper, desc: "A floating bumper ahead. Bounces anyone who touches it. Arms in half a second." },
       { name: "Charge", cd: 300, cast: castCharge, desc: "A lobbed sticky charge. After 1.7 s it breaks every tile nearby and clears placeables." },
       { name: "Saw", cd: 270, cast: castSaw, desc: "A blade that rolls along the floor, dooming every tile it crosses." },
+    ],
+  },
+  dab: {
+    id: "dab",
+    name: "Dab",
+    title: "the forger",
+    trait: "Sees through her forgeries: decoys and hollowed tiles hold only her.",
+    blurb: "Fake floor that looks real, tiles that turn to air, a brushstroke that rubs the floor out.",
+    moves: [
+      { name: "Decoy", cd: 200, cast: castDecoy, desc: "Paints two tiles of fake floor (ahead, or further if you hold forward). Only Dab can stand on it. In the air it appears under you." },
+      { name: "Hollow", cd: 420, cast: castHollow, desc: "Tiles ahead shimmer, then for 2.5 s hold only Dab. Anyone standing there drops." },
+      { name: "Rub out", cd: 270, cast: castRub, desc: "A brushstroke past your own tiles: after half a second every platform it covers is erased." },
     ],
   },
 };

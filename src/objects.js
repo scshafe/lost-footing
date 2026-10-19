@@ -5,7 +5,7 @@
 
 import { PLAYER } from "./constants.js";
 import { addEvent, blame, circleBox, sign } from "./common.js";
-import { getTile, isSolid, breakTile, damageTile, stressTile } from "./tiles.js";
+import { getTile, isSolid, isFloor, breakTile, damageTile, stressTile } from "./tiles.js";
 
 export const OBJ = Object.freeze({
   gravity: 0.6,
@@ -22,6 +22,9 @@ export const OBJ = Object.freeze({
   bumper: { r: 22, life: 420, max: 2, uses: 4, arm: 30, speed: 11.5 },
   charge: { r: 8, fuse: 100, radius: 115, max: 1 },
   saw: { r: 14, speed: 7, life: 130 },
+  decoy: { w: 96, h: 18, life: 300, max: 2, near: 90, far: 150 },
+  hollow: { near: 30, reach: 130 },
+  rub: { near: 8, reach: 170, delay: 30 },
 });
 
 export function addObject(state, o) {
@@ -47,7 +50,7 @@ export function limitOwned(state, owner, match, max) {
 }
 
 function objX(o) {
-  return o.type === "coat" ? (o.x0 + o.x1) / 2 : o.w ? o.x + o.w / 2 : o.x;
+  return o.type === "coat" || o.type === "rub" ? (o.x0 + o.x1) / 2 : o.w ? o.x + o.w / 2 : o.x;
 }
 function objY(o) {
   return o.h ? o.y + o.h / 2 : o.y;
@@ -57,7 +60,7 @@ function objY(o) {
 function objectSurfaces(state) {
   const list = [];
   for (const t of state.tiles) {
-    if (t.state !== "solid" || t.kind === "halo") continue;
+    if (!isFloor(t)) continue;
     list.push({ kind: "tile", id: t.id, top: t.y, x0: t.x, x1: t.x + t.w });
   }
   for (const o of state.objects) {
@@ -160,7 +163,7 @@ export function makeCoat(state, owner, coat, x, top) {
   let lo = Infinity;
   let hi = -Infinity;
   for (const t of state.tiles) {
-    if (!isSolid(t) || t.kind === "halo" || t.y !== top) continue;
+    if (!isFloor(t) || t.y !== top) continue;
     if (t.x + t.w <= x0 || t.x >= x1) continue;
     supports.push(t.id);
     lo = Math.min(lo, t.x);
@@ -202,7 +205,7 @@ function landLob(state, o, land) {
 export function explode(state, o, cx, cy) {
   const R = OBJ.charge.radius;
   for (const t of state.tiles) {
-    if (!isSolid(t) || t.kind === "halo") continue;
+    if (!isFloor(t)) continue;
     if (circleBox(cx, cy, R, t.x, t.y, t.w, t.h)) damageTile(state, t, 2, o.owner, "charge");
   }
   for (const q of state.objects) {
@@ -365,6 +368,13 @@ export function updateObjects(state) {
         if (--o.life <= 0) o.dead = true;
         break;
       }
+      case "rub": {
+        if (--o.fuse > 0) break;
+        o.dead = true;
+        rubOut(state, o);
+        surfs = objectSurfaces(state);
+        break;
+      }
       case "saw": {
         updateSaw(state, o, surfs);
         break;
@@ -372,6 +382,18 @@ export function updateObjects(state) {
     }
   }
   if (state.objects.some((o) => o.dead)) state.objects = state.objects.filter((o) => !o.dead);
+}
+
+// Dab's eraser stroke lands: the platforms in its span at its height go.
+function rubOut(state, o) {
+  for (const t of state.tiles) {
+    if (!isSolid(t) || t.kind === "halo" || t.y !== o.y) continue;
+    if (t.x >= o.x1 || t.x + t.w <= o.x0) continue;
+    if (t.kind === "decoy" && t.owner === o.owner) continue;
+    if (t.kind === "crumble") breakTile(state, t, o.owner, "rub");
+    else damageTile(state, t, 2, o.owner, "rub");
+  }
+  addEvent(state, { type: "rubOut", x0: o.x0, x1: o.x1, y: o.y, owner: o.owner });
 }
 
 function gustPush(state, x, y) {
@@ -527,7 +549,7 @@ function updateSaw(state, o, surfs) {
   if (o.onTop !== null) {
     // Cut what it rolls over.
     for (const t of state.tiles) {
-      if (!isSolid(t) || t.kind === "halo" || t.y !== o.onTop) continue;
+      if (!isFloor(t) || t.y !== o.onTop) continue;
       if (o.x + o.r * 0.5 < t.x || o.x - o.r * 0.5 > t.x + t.w) continue;
       if (t.kind === "crumble") {
         if (t.stress < 0.8) {

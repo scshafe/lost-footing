@@ -1,8 +1,8 @@
 // Platform tiles: crumble tiles (stress from standing, shake, fall, respawn),
 // sturdy slabs (hit points, broken only by moves and hazards) and temporary
-// tiles (respawn halos, Mason's ledge).
+// tiles (respawn halos, Mason's ledge, Dab's decoys).
 
-import { CRUMBLE, STURDY, MATCH } from "./constants.js";
+import { CRUMBLE, STURDY, MATCH, HOLLOW } from "./constants.js";
 import { addEvent, blame, creditBreak } from "./common.js";
 
 export function getTile(state, id) {
@@ -13,6 +13,18 @@ export function getTile(state, id) {
 
 export function isSolid(tile) {
   return !!tile && tile.state === "solid";
+}
+
+// Real ground for things other than their painter: solid, and not a halo (only
+// its owner stands on it) or a decoy (only its painter does).
+export function isFloor(tile) {
+  return isSolid(tile) && tile.kind !== "halo" && tile.kind !== "decoy";
+}
+
+// Who alone can stand on this tile, or -1 for anyone.
+export function tileOwner(tile) {
+  if (tile.kind === "halo" || tile.kind === "decoy") return tile.owner;
+  return tile.hollow > 0 ? tile.hollowBy : -1;
 }
 
 // Add a temporary tile (a halo or a ledge).
@@ -38,6 +50,10 @@ export function addTempTile(state, { kind, x, y, w, h, owner, life, hp = 1 }) {
     owner,
     life,
     age: 0,
+    fooled: [],
+    hollow: 0,
+    hollowArm: 0,
+    hollowBy: -1,
   };
   state.tiles.push(tile);
   return tile;
@@ -77,11 +93,30 @@ function creditFor(state, tile) {
   return tile.stressBy >= 0 && state.tick - tile.stressAt <= MATCH.blameWindow ? tile.stressBy : -1;
 }
 
+// A decoy drops whoever steps onto it (anyone but its painter), who is then
+// credited to the painter.
+function fool(state, tile) {
+  for (const p of state.players) {
+    if (p.status !== "play" || p.seat === tile.owner || p.vy < 0 || p.invuln > 0) continue;
+    // Crossed the top this tick (p.vy is the move just made).
+    const bottom = p.y + p.h;
+    if (bottom - p.vy > tile.y + 1 || bottom < tile.y) continue;
+    if (p.x + p.w <= tile.x || p.x >= tile.x + tile.w) continue;
+    blame(state, p, tile.owner, "decoy");
+    if (!tile.fooled.includes(p.seat)) {
+      tile.fooled.push(p.seat);
+      addEvent(state, { type: "fooled", x: p.x + p.w / 2, y: tile.y, seat: p.seat, owner: tile.owner });
+    }
+  }
+}
+
 // Break a tile now: it stops being solid and falls away. `by` is the seat
 // whose move broke it (-1 for the stage or plain standing).
 export function breakTile(state, tile, by = -1, cause = "break") {
   if (!isSolid(tile)) return;
   tile.state = "falling";
+  tile.hollow = 0;
+  tile.hollowArm = 0;
   tile.timer = 0;
   tile.fallY = 0;
   tile.fallVy = 0;
@@ -103,6 +138,13 @@ export function updateTiles(state) {
     switch (tile.state) {
       case "solid": {
         if (tile.kind === "crumble") {
+          if (tile.hollowArm > 0 && --tile.hollowArm === 0) {
+            tile.hollow = HOLLOW.ticks;
+            for (const p of state.players) {
+              if (p.status === "play" && p.supportTiles.includes(tile.id)) blame(state, p, tile.hollowBy, "hollow");
+            }
+            addEvent(state, { type: "hollow", x: tile.x + tile.w / 2, y: tile.y, id: tile.id });
+          } else if (tile.hollow > 0) tile.hollow--;
           if (tile.load > 0) {
             tile.stress += tile.load;
           } else if (tile.stress < CRUMBLE.doomAt) {
@@ -117,6 +159,7 @@ export function updateTiles(state) {
           }
           if (tile.stress >= 1) breakTile(state, tile, creditFor(state, tile), tile.stressCause || "crumble");
         } else if (tile.life >= 0) {
+          if (tile.kind === "decoy") fool(state, tile);
           tile.age++;
           tile.life--;
           if (tile.life <= 0) {
