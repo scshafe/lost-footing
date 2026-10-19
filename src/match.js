@@ -5,7 +5,7 @@
 import { BLAST, MATCH, TILE } from "./constants.js";
 import { seedToU32, randInt } from "./rng.js";
 import { stageById, buildTiles } from "./stages.js";
-import { addEvent, blame, currentBlame } from "./common.js";
+import { addEvent, blame, currentBlame, sameTeam, teamOf } from "./common.js";
 import { newPlayer, controlPlayer, movePlayer, rideTile, surfaces, applyLoad, tickPlayer } from "./players.js";
 import { resolveContacts } from "./contact.js";
 import { updateTiles, addTempTile, isSolid, breakTile, damageTile } from "./tiles.js";
@@ -16,7 +16,10 @@ import { botButtons, newBotMemory } from "./bot.js";
 
 export const SIM_VERSION = 1;
 
-// config: { seed, stage, stocks, seats: [{ kind: "human"|"bot", character, difficulty }] }
+// config: { seed, stage, stocks, seats: [{ kind: "human"|"bot", character, difficulty, stocks?, team? }] }
+// A seat's stocks override the match's (a handicap, 1 to 9); team (0 or 1) puts
+// seats on a team that wins or loses together. Teams need two sides: with only
+// one, everyone plays alone.
 export function createMatch(config = {}) {
   const stage = stageById(config.stage || "yard");
   const seats = (config.seats && config.seats.length ? config.seats : [{ kind: "human" }, { kind: "bot" }]).slice(0, 4);
@@ -41,7 +44,7 @@ export function createMatch(config = {}) {
     tiles,
     baseTiles: tiles.length,
     nextTileId: 100000,
-    players: seats.map((s, i) => newPlayer(i, s, stocks)),
+    players: seats.map((s, i) => newPlayer(i, s, Number.isInteger(s.stocks) ? Math.max(1, Math.min(9, s.stocks)) : stocks)),
     objects: [],
     nextObjectId: 1,
     hazards: newHazardState(stage),
@@ -53,6 +56,8 @@ export function createMatch(config = {}) {
     result: null,
     events: [],
   };
+  if (new Set(state.players.map(teamOf)).size < 2) for (const p of state.players) p.team = -1;
+  state.teams = state.players.some((p) => p.team >= 0);
   // Everyone starts on a halo at a distinct spawn point.
   state.players.forEach((p, i) => {
     const sp = stage.spawns[i % stage.spawns.length];
@@ -196,7 +201,8 @@ function checkEliminations(state) {
 }
 
 export function eliminate(state, p, cause) {
-  const b = currentBlame(state, p);
+  let b = currentBlame(state, p);
+  if (b && sameTeam(state.players[b.seat], p)) b = null; // friendly fire earns no credit
   const by = b ? b.seat : -1;
   p.stocks--;
   p.stats.deaths++;
@@ -299,12 +305,11 @@ function checkEnd(state) {
   }
   if (state.phase !== "play") return;
   const standing = state.players.filter((p) => p.status !== "out");
-  if (standing.length > 1) return;
+  if (new Set(standing.map(teamOf)).size > 1) return;
   // Ranking: the survivor, then the eliminated in reverse order. Players
   // eliminated on the same tick are ordered by credited eliminations, then
   // fewer self-eliminations, then platforms broken, then seat.
-  const order = [];
-  if (standing.length === 1) order.push(standing[0].seat);
+  const order = standing.slice().sort(tieBreak).map((p) => p.seat);
   const byTick = new Map();
   for (const seat of state.eliminationOrder) {
     const p = state.players[seat];
@@ -320,7 +325,15 @@ function checkEnd(state) {
   for (const p of state.players) p.stats.longestLife = Math.max(p.stats.longestLife, p.stats.lifeTicks);
   state.phase = "over";
   state.phaseTimer = MATCH.endDelay;
-  state.result = { winner: order[0], ranking: order, ticks: state.playTicks, tied: standing.length === 0 };
+  const winners = standing.map((p) => p.seat);
+  state.result = {
+    winner: order[0],
+    ranking: order,
+    ticks: state.playTicks,
+    tied: standing.length === 0,
+    winners, // the surviving team (one seat when nobody is on a team)
+    team: state.teams && standing.length ? standing[0].team : -1,
+  };
   addEvent(state, { type: "win", seat: order[0] });
 }
 

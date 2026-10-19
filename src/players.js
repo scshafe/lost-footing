@@ -24,7 +24,7 @@ export function newStats() {
   };
 }
 
-export function newPlayer(seat, { kind = "human", character = "mason", difficulty = "normal", slot } = {}, stocks = 3) {
+export function newPlayer(seat, { kind = "human", character = "mason", difficulty = "normal", slot, team = -1 } = {}, stocks = 3) {
   return {
     seat,
     slot: slot ?? seat, // the physical seat (colour, keys) when seats are skipped
@@ -57,6 +57,8 @@ export function newPlayer(seat, { kind = "human", character = "mason", difficult
     btn: 0,
     prevBtn: 0,
     stocks,
+    startStocks: stocks, // a handicap can differ from the match default
+    team: team >= 0 ? team : -1, // -1: plays alone
     status: "play", // "play" | "dead" | "out"
     respawnTimer: 0,
     invuln: 0,

@@ -67,8 +67,11 @@ Gale Bridge (gales), Conveyor Sky (belts that stop and reverse), Sinking Ship
 Esc pauses, M mutes, Enter confirms. In the Players screen each seat joins
 with its own Place key, changes character with its left/right keys and leaves
 with its Break key; number keys 1 to 4 add a bot to that seat (press again
-for hard, easy, off). The Controls screen has a key tester: keyboards cannot
-report every combination of keys held at once (ghosting), so check yours there.
+for hard, easy, off). The Trick key sets a team (solo, A or B: a team wins
+together) and up/down give a handicap of up to two stocks either way. The
+Controls screen has a key tester and lets you rebind keys (Enter to edit):
+keyboards cannot report every combination of keys held at once (ghosting), so
+check yours there.
 
 ## Build and test
 

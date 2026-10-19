@@ -6,6 +6,7 @@
 import { BTN } from "./input.js";
 import { CRUMBLE } from "./constants.js";
 import { rand } from "./rng.js";
+import { sameTeam } from "./common.js";
 import { CHARACTERS, lobVelocity, lobOrigin } from "./characters.js";
 import { predictLob } from "./objects.js";
 
@@ -202,7 +203,7 @@ export function botButtons(state, seat) {
   mem.guard = null;
   if (lv.recoverSmart && p.ground) {
     for (const q of state.players) {
-      if (q === p || !recovering(q, segs)) continue;
+      if (sameTeam(p, q) || !recovering(q, segs)) continue;
       const edge = recoveryEdge(q, segs);
       if (edge && Math.abs(edge.top - p.groundTop) < 140 && Math.abs(edge.x - f.x) < 320) mem.guard = edge;
     }
@@ -368,7 +369,7 @@ const AIMS = [0, BTN.UP, -1]; // neutral, high lob, far (forward held)
 
 function opponents(state, p, segs) {
   return state.players
-    .filter((q) => q !== p && q.status === "play" && q.invuln === 0)
+    .filter((q) => !sameTeam(p, q) && q.status === "play" && q.invuln === 0)
     .map((q) => ({ ...q, rec: recovering(q, segs), edge: recovering(q, segs) ? recoveryEdge(q, segs) : null, ground: q.ground }));
 }
 

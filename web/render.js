@@ -12,6 +12,8 @@ export const VIEW = { w: 1600, h: 980 }; // the world (900 tall) plus a HUD stri
 export const SEAT_COLORS = ["#ff5a5f", "#4aa8ff", "#4fdc7b", "#ffc23d"];
 export const SEAT_DARK = ["#9e2328", "#1d5d9e", "#1f8a45", "#a3740f"];
 export const SEAT_NAMES = ["P1", "P2", "P3", "P4"];
+export const TEAM_TINTS = ["#ff7be5", "#7be5ff"];
+export const TEAM_LETTERS = ["A", "B"];
 const COAT_COLORS = { glue: "#e4f05a", oil: "#3a2b5c", acid: "#7dff4f", thorn: "#4a9a3a" };
 const CAUSE_TEXT = {
   fall: "fell",
@@ -1035,6 +1037,14 @@ export class Renderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(this.name(p.seat), cx, p.y - 16);
+    if (p.team >= 0) {
+      const half = ctx.measureText(this.name(p.seat)).width / 2;
+      ctx.fillStyle = TEAM_TINTS[p.team];
+      ctx.textAlign = "left";
+      ctx.fillText(TEAM_LETTERS[p.team], cx + half + 4, p.y - 16);
+      ctx.textAlign = "center";
+      ctx.fillStyle = c;
+    }
     ctx.beginPath();
     ctx.moveTo(cx - 4, p.y - 13);
     ctx.lineTo(cx + 4, p.y - 13);
@@ -1415,7 +1425,7 @@ export class Renderer {
       ctx.font = "15px system-ui, sans-serif";
       ctx.fillText(ch.name + (p.kind === "bot" ? " · bot" : ""), x + 62, 914);
       // Stocks.
-      for (let s = 0; s < state.stocks; s++) {
+      for (let s = 0; s < (p.startStocks || state.stocks); s++) {
         ctx.fillStyle = s < p.stocks ? c : "#333";
         ctx.beginPath();
         ctx.arc(x + 30 + s * 16, 948, 6, 0, Math.PI * 2);
@@ -1424,6 +1434,16 @@ export class Renderer {
       ctx.fillStyle = "#bbb";
       ctx.font = "12px system-ui, sans-serif";
       ctx.fillText(`KOs ${p.stats.kos}`, x + 26, 960);
+      if (p.team >= 0) {
+        ctx.fillStyle = TEAM_TINTS[p.team];
+        roundRect(ctx, x + pw - 30, 910, 20, 20, 5);
+        ctx.fill();
+        ctx.fillStyle = "#111";
+        ctx.font = "bold 14px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(TEAM_LETTERS[p.team], x + pw - 20, 913);
+        ctx.textAlign = "left";
+      }
       // Moves: key, name, cooldown.
       const mx = x + Math.max(110, pw - 3 * 76 - 10);
       ch.moves.forEach((m, k) => {
@@ -1455,7 +1475,7 @@ export class Renderer {
         ctx.fillStyle = "#fff";
         ctx.font = "bold 12px system-ui, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText("respawning…", x + 26 + state.stocks * 16, 942);
+        ctx.fillText("respawning…", x + 26 + (p.startStocks || state.stocks) * 16, 942);
       }
     });
     // Clock.

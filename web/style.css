@@ -399,3 +399,7 @@ table.stats th:first-child {
 .cluster .dim {
   color: var(--muted);
 }
+.seat .teamrow {
+  font-size: 13px;
+  margin: 2px 0 6px;
+}

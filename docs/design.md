@@ -44,6 +44,15 @@ you keep moving so your own ground holds.
   and they are eliminated within 5 seconds, you are credited.
 - Everyone starts with 3 stocks (1 to 5 in setup). Last player with stocks
   wins.
+- **Handicaps.** A seat can start with fewer or more stocks than the match
+  default (down or up by 2 in setup, 1 to 9 overall).
+- **Teams.** Seats can be put on Team A or Team B (the rest play alone). The
+  match ends when only one side has anyone left, and the whole side wins; its
+  surviving members place first, then the eliminated in reverse order. Nothing
+  is filtered between teammates (a teammate's glue still holds you, their
+  spring still launches you), but eliminations a teammate caused earn no credit,
+  and bots never treat a teammate as an opponent. There must be two sides (A and
+  B, or a team and a solo player); with only one, everyone plays alone.
 
 ## Crumble platform
 
@@ -343,6 +352,9 @@ amplitudes, reversal rhythm) are first guesses.
   How to play, Controls (with a key tester), the match, Pause (resume,
   restart, players and stage, quit), Results (placings, awards, stats,
   rematch). Everything is keyboard-driven; settings are remembered per browser.
+  On the Players screen each seat's Trick key cycles solo / Team A / Team B and
+  its up and down keys give a stock handicap (-2 to +2); the Results screen
+  announces a winning team. Team letters sit by the name tag and in the HUD.
 - Keys are rebindable on the Controls screen (Enter to edit, Enter on an action,
   then the new key; Backspace restores the default). A rebound action holds one
   key; a key another action uses is refused, and the menu keys (Esc, Enter, M,
@@ -377,4 +389,4 @@ amplitudes, reversal rhythm) are first guesses.
 
 - Online play (lockstep or rollback over the deterministic simulation).
 - Gamepad support (the brief says keyboard only, so this needs the owner's say).
-- Team mode and handicaps; replays from recorded inputs.
+- Replays from recorded inputs.
