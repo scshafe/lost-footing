@@ -3,65 +3,39 @@
 // same positions. No Ctrl/Alt/Tab/function keys: Ctrl+W would close the tab.
 
 import { BTN } from "../src/input.js";
-
-export const CLUSTERS = [
-  {
-    name: "Left keys",
-    keys: { left: ["KeyA"], right: ["KeyD"], up: ["KeyW"], down: ["KeyS"], place: ["KeyQ"], trick: ["KeyE"], brk: ["KeyR"] },
-    labels: { left: "A", right: "D", up: "W", down: "S", place: "Q", trick: "E", brk: "R" },
-  },
-  {
-    name: "Arrows",
-    keys: {
-      left: ["ArrowLeft"],
-      right: ["ArrowRight"],
-      up: ["ArrowUp"],
-      down: ["ArrowDown"],
-      place: ["Period", "Delete"],
-      trick: ["Slash", "End"],
-      brk: ["ShiftRight", "PageDown"],
-    },
-    labels: { left: "←", right: "→", up: "↑", down: "↓", place: ". / Del", trick: "/ or End", brk: "R-Shift / PgDn" },
-    short: { place: ".", trick: "/", brk: "⇧" },
-  },
-  {
-    name: "IJKL",
-    keys: { left: ["KeyJ"], right: ["KeyL"], up: ["KeyI"], down: ["KeyK"], place: ["KeyU"], trick: ["KeyO"], brk: ["KeyP"] },
-    labels: { left: "J", right: "L", up: "I", down: "K", place: "U", trick: "O", brk: "P" },
-  },
-  {
-    name: "Numpad",
-    keys: {
-      left: ["Numpad4"],
-      right: ["Numpad6"],
-      up: ["Numpad8"],
-      down: ["Numpad5", "Numpad2"],
-      place: ["Numpad7"],
-      trick: ["Numpad9"],
-      brk: ["NumpadAdd"],
-    },
-    labels: { left: "n4", right: "n6", up: "n8", down: "n5", place: "n7", trick: "n9", brk: "n+" },
-  },
-];
+import { ACTIONS, GLOBAL_KEYS, resolveClusters } from "./bindings.js";
 
 const BIT = { left: BTN.LEFT, right: BTN.RIGHT, up: BTN.UP, down: BTN.DOWN, place: BTN.PLACE, trick: BTN.TRICK, brk: BTN.BREAK };
 
+// The seat clusters in force: defaults plus the player's rebinds.
+let clusters = resolveClusters();
 // code -> [{ seat, action }]
-const CODE_MAP = new Map();
-CLUSTERS.forEach((c, seat) => {
-  for (const [action, codes] of Object.entries(c.keys)) {
-    for (const code of codes) {
-      if (!CODE_MAP.has(code)) CODE_MAP.set(code, []);
-      CODE_MAP.get(code).push({ seat, action });
-    }
-  }
-});
+let codeMap = new Map();
 
-const GLOBAL = new Set(["Escape", "Enter", "NumpadEnter", "KeyM", "Digit1", "Digit2", "Digit3", "Digit4", "Space", "Backspace", "Tab"]);
+function indexClusters() {
+  codeMap = new Map();
+  clusters.forEach((c, seat) => {
+    for (const action of ACTIONS) {
+      for (const code of c.keys[action]) {
+        if (!codeMap.has(code)) codeMap.set(code, []);
+        codeMap.get(code).push({ seat, action });
+      }
+    }
+  });
+}
+indexClusters();
+
+export function getClusters() {
+  return clusters;
+}
+
+export function setBindings(overrides) {
+  clusters = resolveClusters(overrides);
+  indexClusters();
+}
 
 export function shortLabel(seat, action) {
-  const c = CLUSTERS[seat];
-  return (c.short && c.short[action]) || c.labels[action];
+  return clusters[seat].short[action];
 }
 
 export class Keyboard {
@@ -75,7 +49,7 @@ export class Keyboard {
   }
 
   isGameKey(code) {
-    return CODE_MAP.has(code) || GLOBAL.has(code);
+    return codeMap.has(code) || GLOBAL_KEYS.has(code);
   }
 
   down(e) {
@@ -99,14 +73,14 @@ export class Keyboard {
   }
 
   menuActions(code) {
-    return CODE_MAP.get(code) || [];
+    return codeMap.get(code) || [];
   }
 
   // The button bitmask for a seat right now; clears the tap memory for it.
   sample(seat) {
     let bits = 0;
-    for (const [action, codes] of Object.entries(CLUSTERS[seat].keys)) {
-      for (const code of codes) {
+    for (const action of ACTIONS) {
+      for (const code of clusters[seat].keys[action]) {
         if (this.held.has(code) || this.tapped.has(code)) bits |= BIT[action];
       }
     }

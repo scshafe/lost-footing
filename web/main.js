@@ -3,7 +3,8 @@
 // and rendering. All game rules live in ../src/.
 
 import { createMatch, step, STAGES, CHARACTERS, CHARACTER_IDS } from "../src/index.js";
-import { Keyboard, CLUSTERS, shortLabel } from "./keys.js";
+import { Keyboard, getClusters, setBindings, shortLabel } from "./keys.js";
+import { bind, reset, sanitize, keyName, isBindable } from "./bindings.js";
 import { Renderer, SEAT_COLORS, SEAT_NAMES, drawStageThumb, drawPortrait } from "./render.js";
 import { playEvent, sfx, unlock, isMuted, setMuted } from "./audio.js";
 
@@ -41,6 +42,28 @@ function load() {
 function save() {
   try {
     localStorage.setItem("lf-settings", JSON.stringify(settings));
+  } catch {
+    /* storage may be unavailable */
+  }
+}
+
+// Rebound keys: { seat: { action: code } }, remembered per browser.
+let bindings = loadBindings();
+setBindings(bindings);
+
+function loadBindings() {
+  try {
+    return sanitize(JSON.parse(localStorage.getItem("lf-keys") || "null"));
+  } catch {
+    return {};
+  }
+}
+
+function setKeys(next) {
+  bindings = next;
+  setBindings(bindings);
+  try {
+    localStorage.setItem("lf-keys", JSON.stringify(bindings));
   } catch {
     /* storage may be unavailable */
   }
@@ -139,7 +162,6 @@ function render() {
 }
 
 function seatCtl(i) {
-  const L = CLUSTERS[i].labels;
   const l = (a) => `<kbd>${shortLabel(i, a)}</kbd>`;
   return `${l("left")}${l("right")} character · ${l("place")} join · ${l("brk")} leave · <kbd>${i + 1}</kbd> bot`;
 }
@@ -149,7 +171,7 @@ function setupHtml() {
     .map((seat, i) => {
       const color = SEAT_COLORS[i];
       const ch = CHARACTERS[seat.character];
-      const head = `<div class="tag" style="color:${color}">${SEAT_NAMES[i]} <span class="kind">${CLUSTERS[i].name}</span></div>`;
+      const head = `<div class="tag" style="color:${color}">${SEAT_NAMES[i]} <span class="kind">${getClusters()[i].name}</span></div>`;
       if (seat.kind === "off") {
         return `<div class="seat off" style="border-color:${color}55">${head}
           <div class="join">Press ${`<kbd>${shortLabel(i, "place")}</kbd>`} to join<br>or <kbd>${i + 1}</kbd> to add a bot</div>
@@ -235,52 +257,110 @@ function helpHtml() {
   </div>`;
 }
 
+const ACTION_ROWS = [
+  ["left", "Left"],
+  ["right", "Right"],
+  ["up", "Jump (twice for air jump)"],
+  ["down", "Drop through / fast fall"],
+  ["place", "1 Place"],
+  ["trick", "2 Trick"],
+  ["brk", "3 Break"],
+];
+const RESET_ROW = ACTION_ROWS.length; // the "reset this seat" row
+
 function controlsHtml() {
-  const actions = [
-    ["left", "Left"],
-    ["right", "Right"],
-    ["up", "Jump (twice for air jump)"],
-    ["down", "Drop through / fast fall"],
-    ["place", "1 Place"],
-    ["trick", "2 Trick"],
-    ["brk", "3 Break"],
-  ];
-  const cards = CLUSTERS.map((c, i) => {
-    const rows = actions
-      .map(([a, label]) => `<div>${c.keys[a].map((code) => `<kbd data-code="${code}">${keyName(code)}</kbd>`).join(" ")}</div><div>${label}</div>`)
-      .join("");
-    return `<div class="cluster" style="border-color:${SEAT_COLORS[i]}"><div class="tag" style="color:${SEAT_COLORS[i]};font-weight:900;font-size:20px;margin-bottom:8px">${SEAT_NAMES[i]} · ${c.name}</div><div class="grid">${rows}</div></div>`;
-  }).join("");
+  const edit = screen.edit; // { seat, row, waiting } while rebinding
+  const cards = getClusters()
+    .map((c, i) => {
+      const cell = (row, inner) => `<div class="${edit && edit.seat === i && edit.row === row ? "pick" : ""}">${inner}</div>`;
+      const rows = ACTION_ROWS.map(([a, label], row) => {
+        const waiting = edit && edit.waiting && edit.seat === i && edit.row === row;
+        const caps = waiting ? `<kbd>press a key…</kbd>` : c.keys[a].map((code) => `<kbd data-code="${code}">${keyName(code)}</kbd>`).join(" ");
+        return cell(row, caps) + cell(row, label);
+      }).join("");
+      const resetRow = edit ? cell(RESET_ROW, `<span class="dim">reset</span>`) + cell(RESET_ROW, `<span class="dim">this seat's keys</span>`) : "";
+      return `<div class="cluster" style="border-color:${SEAT_COLORS[i]}"><div class="tag" style="color:${SEAT_COLORS[i]};font-weight:900;font-size:20px;margin-bottom:8px">${SEAT_NAMES[i]} · ${c.name}</div><div class="grid">${rows}${resetRow}</div></div>`;
+    })
+    .join("");
+  const sub = edit
+    ? edit.waiting
+      ? "Press the key for this action. <kbd>Esc</kbd> cancels."
+      : "Move with the arrow keys or your seat's keys. <kbd>Enter</kbd> rebinds the highlighted action, <kbd>Backspace</kbd> puts its default back."
+    : "Up to four players share one keyboard. Press keys to test them: each lights up while the keyboard reports it. <kbd>Enter</kbd> to change keys.";
   return `<div class="screen">
     <h2>Controls</h2>
-    <p class="sub">Up to four players share one keyboard. Press keys to test them: each lights up while the keyboard reports it.</p>
+    <p class="sub">${sub}</p>
     <div class="clusters">${cards}</div>
     <div class="cols" style="margin-top:18px">
-      <div class="rule"><h3>Everyone</h3><p><kbd data-code="Escape">Esc</kbd> pause · <kbd data-code="KeyM">M</kbd> sound on/off · <kbd data-code="Enter">Enter</kbd> confirm in menus</p></div>
+      <div class="rule"><h3>Everyone</h3><p><kbd data-code="Escape">Esc</kbd> pause · <kbd data-code="KeyM">M</kbd> sound on/off · <kbd data-code="Enter">Enter</kbd> confirm in menus. These and <kbd>1</kbd>–<kbd>4</kbd>, <kbd>Space</kbd>, <kbd>Tab</kbd> and <kbd>Backspace</kbd> can't be rebound.</p></div>
       <div class="rule"><h3>Ghosting</h3><p>Many keyboards can't report every combination of three or more keys held at once. If a key here doesn't light up while others are held, try another seat's cluster for that player, or play with fewer humans and fill seats with bots. Right Shift rarely ghosts.</p></div>
     </div>
-    <p class="hint"><kbd>Esc</kbd> back</p>
+    <p class="hint">${edit ? "<kbd>Esc</kbd> done" : "<kbd>Esc</kbd> back"}</p>
   </div>`;
 }
 
-function keyName(code) {
-  const map = {
-    ArrowLeft: "←",
-    ArrowRight: "→",
-    ArrowUp: "↑",
-    ArrowDown: "↓",
-    Period: ".",
-    Slash: "/",
-    ShiftRight: "R-Shift",
-    Delete: "Del",
-    End: "End",
-    PageDown: "PgDn",
-    NumpadAdd: "Num +",
-  };
-  if (map[code]) return map[code];
-  if (code.startsWith("Key")) return code.slice(3);
-  if (code.startsWith("Numpad")) return "Num " + code.slice(6);
-  return code;
+function controlsInput(code, d) {
+  const edit = screen.edit;
+  if (!edit) {
+    if (d === "up" || d === "down") {
+      const el = ui.querySelector(".screen");
+      if (el) el.scrollBy({ top: d === "up" ? -160 : 160, behavior: "smooth" });
+      return;
+    }
+    if (code === "Enter" || code === "NumpadEnter") {
+      sfx.confirm();
+      screen.edit = { seat: 0, row: 0, waiting: false };
+      return render();
+    }
+    if (d === "back") {
+      sfx.back();
+      show("title", { sel: 2 });
+    }
+    return;
+  }
+  if (edit.waiting) {
+    if (code === "Escape") edit.waiting = false;
+    else if (!isBindable(code)) return toast(`${keyName(code)} can't be used as a game key`);
+    else {
+      const r = bind(bindings, edit.seat, ACTION_ROWS[edit.row][0], code);
+      if (!r.ok) return toast(r.reason);
+      setKeys(r.overrides);
+      edit.waiting = false;
+      sfx.confirm();
+    }
+    return render();
+  }
+  if (code === "Escape") {
+    sfx.back();
+    delete screen.edit;
+    return render();
+  }
+  if (code === "Backspace") {
+    setKeys(edit.row === RESET_ROW ? reset(bindings, edit.seat) : reset(bindings, edit.seat, ACTION_ROWS[edit.row][0]));
+    sfx.back();
+    return render();
+  }
+  const rows = RESET_ROW + 1;
+  if (code.startsWith("Arrow") || d === "up" || d === "down" || d === "left" || d === "right") {
+    const dir = code.startsWith("Arrow") ? code.slice(5).toLowerCase() : d;
+    if (dir === "up") edit.row = (edit.row + rows - 1) % rows;
+    else if (dir === "down") edit.row = (edit.row + 1) % rows;
+    else if (dir === "left") edit.seat = (edit.seat + 3) % 4;
+    else if (dir === "right") edit.seat = (edit.seat + 1) % 4;
+    else return;
+    sfx.menu();
+    return render();
+  }
+  if (code === "Enter" || code === "NumpadEnter") {
+    if (edit.row === RESET_ROW) {
+      setKeys(reset(bindings, edit.seat));
+      sfx.back();
+    } else {
+      edit.waiting = true;
+      sfx.confirm();
+    }
+    render();
+  }
 }
 
 function pauseHtml() {
@@ -381,17 +461,18 @@ keys.onPress((code, actions) => {
     case "stage":
       return stageInput(d);
     case "help":
-    case "controls":
       if (d === "up" || d === "down") {
         const el = ui.querySelector(".screen");
         if (el) el.scrollBy({ top: d === "up" ? -160 : 160, behavior: "smooth" });
-        if (screen.name === "help") return;
+        return;
       }
-      if (d === "back" || (code === "Enter" && screen.name === "help")) {
+      if (d === "back" || code === "Enter") {
         sfx.back();
-        show("title", { sel: screen.name === "help" ? 1 : 2 });
+        show("title", { sel: 1 });
       }
       return;
+    case "controls":
+      return controlsInput(code, d);
     case "game":
       return gameInput(code, d);
     case "results":

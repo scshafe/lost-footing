@@ -285,6 +285,11 @@ collapse.
   How to play, Controls (with a key tester), the match, Pause (resume,
   restart, players and stage, quit), Results (placings, awards, stats,
   rematch). Everything is keyboard-driven; settings are remembered per browser.
+- Keys are rebindable on the Controls screen (Enter to edit, Enter on an action,
+  then the new key; Backspace restores the default). A rebound action holds one
+  key; a key another action uses is refused, and the menu keys (Esc, Enter, M,
+  1-4, Space, Tab, Backspace) and modifiers can't be bound. Stored per browser;
+  stored bindings that clash are dropped on load. Logic in `web/bindings.js`.
 - Fixed camera showing the whole stage, letterboxed to the window.
   Off-screen players get an arrow at the screen edge in their colour.
 - Player colours are per seat (P1 red, P2 blue, P3 green, P4 gold); characters
@@ -305,7 +310,7 @@ collapse.
 ## Ideas not yet built
 
 - Online play (lockstep or rollback over the deterministic simulation).
-- Rebindable keys and gamepad support.
+- Gamepad support (the brief says keyboard only, so this needs the owner's say).
 - More characters: a magnet user (pulls placeables), a painter (fake platforms
   that look solid), a gardener (vines that grow into ladders).
 - Moving stages (a sinking ship, a conveyor sky).

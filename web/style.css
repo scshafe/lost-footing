@@ -391,3 +391,11 @@ table.stats th:first-child {
 #toast.show {
   opacity: 1;
 }
+.cluster .grid .pick {
+  background: #ffffff1a;
+  border-radius: 6px;
+  outline: 1px solid var(--accent);
+}
+.cluster .dim {
+  color: var(--muted);
+}
