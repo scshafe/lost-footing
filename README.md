@@ -17,6 +17,10 @@ from it, with every number the game uses, is [docs/design.md](docs/design.md).
 `PORT=9000 ./scripts/serve` serves on another port. There is no build step:
 plain ES modules and Canvas 2D, no dependencies.
 
+The deployed game runs the same files from a container (`Dockerfile`,
+`server/serve.js`) on a tailnet-only machine, `lost-footing`; a merge to `main`
+deploys it (`deploy/stack/`, `.github/workflows/deploy.yml`).
+
 ## How to play
 
 - **You can never hit anyone.** Nothing you do touches another player.
@@ -77,5 +81,11 @@ bot-versus-bot matches on every stage. Needs Node.js 24.
 - `src/`: the deterministic simulation (60 Hz fixed ticks, seeded RNG, no
   DOM). `createMatch(config)`, `step(state, inputs)`, `hashState(state)`.
 - `web/`: the browser client (screens, rendering, keyboard, WebAudio sound).
+- `server/`: the static server the image runs (`web/` and `src/` only, `/healthz`).
+- `deploy/stack/`: the tailnet stack (Tailscale sidecar and the game).
 - `tests/`: `node:test` suites.
 - `docs/`: the brief and the design.
+
+## License
+
+MIT (`LICENSE`).
