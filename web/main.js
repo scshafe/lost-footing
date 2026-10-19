@@ -2,7 +2,7 @@
 // match, pause, results), the fixed-step game loop, keyboard input, sound
 // and rendering. All game rules live in ../src/.
 
-import { createMatch, step, STAGES, CHARACTERS, CHARACTER_IDS } from "../src/index.js";
+import { createMatch, step, hashState, STAGES, CHARACTERS, CHARACTER_IDS, newRecording, recordTick, finishRecording, encodeReplay, decodeReplay, Replay } from "../src/index.js";
 import { Keyboard, getClusters, setBindings, shortLabel } from "./keys.js";
 import { bind, reset, sanitize, keyName, isBindable } from "./bindings.js";
 import { Renderer, SEAT_COLORS, SEAT_NAMES, drawStageThumb, drawPortrait } from "./render.js";
@@ -77,6 +77,11 @@ let demo = true; // is `match` the background demo?
 let acc = 0;
 let last = performance.now();
 let paused = false;
+let recording = null; // the live match's inputs so far
+let lastRec = null; // the last finished (or loaded) recording, for Watch / Save
+let lastMatch = null; // the finished match the Results screen shows
+let replay = null; // a Replay being watched
+const SPEEDS = [0.5, 1, 2, 4];
 
 function toast(text) {
   toastEl.textContent = text;
@@ -104,8 +109,10 @@ function startMatch() {
     if (s.kind !== "off") seats.push({ kind: s.kind, character: s.character, difficulty: s.difficulty, slot: i, team: s.team ? s.team - 1 : -1, stocks: seatStocks(s) });
   });
   const stage = settings.stage === "random" ? STAGES[Math.floor(Math.random() * STAGES.length)].id : settings.stage;
-  match = createMatch({ seed: Math.floor(Math.random() * 1e9), stage, stocks: settings.stocks, seats });
-  match.chosenStage = settings.stage;
+  const config = { seed: Math.floor(Math.random() * 1e9), stage, stocks: settings.stocks, seats };
+  match = createMatch(config);
+  recording = newRecording(config);
+  lastRec = null;
   demo = false;
   paused = false;
   keys.clearTaps();
@@ -128,7 +135,7 @@ function render() {
         <div class="screen clear">
           <h1 class="logo"><span class="lost">LOST</span> <span class="footing">FOOTING</span></h1>
           <p class="tagline">Nobody can touch anybody. So make the ground go away.</p>
-          <div class="menu">${["Play", "How to play", "Controls", `Sound: ${isMuted() ? "off" : "on"}`]
+          <div class="menu">${["Play", "How to play", "Controls", "Load replay", `Sound: ${isMuted() ? "off" : "on"}`]
             .map((t, i) => `<div class="item ${i === s.sel ? "sel" : ""}">${t}</div>`)
             .join("")}</div>
           <p class="hint">Move with any player's keys (<kbd>W</kbd><kbd>S</kbd> or <kbd>↑</kbd><kbd>↓</kbd>), choose with <kbd>Enter</kbd>. <kbd>M</kbd> mutes.</p>
@@ -157,6 +164,9 @@ function render() {
       break;
     case "results":
       ui.innerHTML = resultsHtml();
+      break;
+    case "replay":
+      ui.innerHTML = replayHtml();
       break;
   }
 }
@@ -440,8 +450,8 @@ function resultsHtml() {
       .map((a) => `<div class="award">${a}</div>`)
       .join("")}</div>
     <table class="stats"><tr><th>Player</th><th>Eliminations caused</th><th>Self-eliminations</th><th>Platforms broken</th><th>Moves used</th><th>Stomps</th><th>Time airborne</th><th>Longest life</th></tr>${rows}</table>
-    <div class="menu" style="flex-direction:row;justify-content:center;margin-top:18px">${["Rematch", "Players and stage", "Title"]
-      .map((t, i) => `<div class="item ${i === screen.sel ? "sel" : ""}" style="min-width:200px">${t}</div>`)
+    <div class="menu" style="flex-direction:row;justify-content:center;margin-top:18px">${["Rematch", "Watch replay", "Save replay", "Players and stage", "Title"]
+      .map((t, i) => `<div class="item ${i === screen.sel ? "sel" : ""}" style="min-width:150px">${t}</div>`)
       .join("")}</div>
   </div>`;
 }
@@ -495,6 +505,8 @@ keys.onPress((code, actions) => {
       return gameInput(code, d);
     case "results":
       return resultsInput(d);
+    case "replay":
+      return replayInput(code, d);
   }
 });
 
@@ -510,12 +522,13 @@ function moveSel(d, n, vertical = true) {
 }
 
 function titleInput(d) {
-  if (moveSel(d, 4)) return;
+  if (moveSel(d, 5)) return;
   if (d !== "ok") return;
   sfx.confirm();
   if (screen.sel === 0) show("setup");
   else if (screen.sel === 1) show("help");
   else if (screen.sel === 2) show("controls");
+  else if (screen.sel === 3) loadReplayFile();
   else {
     setMuted(!isMuted());
     render();
@@ -640,7 +653,7 @@ function gameInput(code, d) {
 }
 
 function resultsInput(d) {
-  if (moveSel(d, 3, false)) return;
+  if (moveSel(d, 5, false)) return;
   if (d === "back") {
     startDemo();
     return show("title");
@@ -649,12 +662,135 @@ function resultsInput(d) {
   sfx.confirm();
   if (screen.sel === 0) startMatch();
   else if (screen.sel === 1) {
+    if (lastRec) startReplay(lastRec, "results");
+    else toast("No replay to watch");
+  } else if (screen.sel === 2) {
+    if (lastRec) downloadReplay(lastRec);
+    else toast("No replay to save");
+  } else if (screen.sel === 3) {
     startDemo();
     show("setup");
   } else {
     startDemo();
     show("title");
   }
+}
+
+// ---- Replays ------------------------------------------------------------------
+
+function startReplay(rec, from) {
+  replay = new Replay(rec);
+  match = replay.state;
+  demo = false;
+  paused = false;
+  acc = 0;
+  renderer.reset();
+  show("replay", { from, speed: 1, paused: false, finished: false, acc: 0 });
+}
+
+function replayHtml() {
+  const s = screen;
+  const hint = s.finished
+    ? "Finished · <kbd>Space</kbd> watch again"
+    : `<kbd>Space</kbd> ${s.paused ? "play" : "pause"} · <kbd>←</kbd><kbd>→</kbd> speed · <kbd>↑</kbd> restart`;
+  return `<div class="replaybar"><b>REPLAY</b> <span id="rp-speed">${SPEEDS[s.speed]}×</span> <span id="rp-time"></span> · ${hint} · <kbd>Esc</kbd> exit</div>`;
+}
+
+function replayInput(code, d) {
+  const s = screen;
+  if (d === "back") {
+    sfx.back();
+    replay = null;
+    if (s.from === "results" && lastMatch) {
+      match = lastMatch;
+      renderer.reset();
+      return show("results", { sel: 1 });
+    }
+    startDemo();
+    return show("title");
+  }
+  if (d === "ok") {
+    if (s.finished || replay.done) return restartReplay();
+    s.paused = !s.paused;
+  } else if (d === "up") return restartReplay();
+  else if (d === "left" || d === "right") {
+    s.speed = Math.max(0, Math.min(SPEEDS.length - 1, s.speed + (d === "left" ? -1 : 1)));
+    sfx.menu();
+  } else return;
+  ui.innerHTML = replayHtml();
+}
+
+function restartReplay() {
+  replay.reset();
+  match = replay.state;
+  renderer.reset();
+  screen.finished = false;
+  screen.paused = false;
+  screen.acc = 0;
+  sfx.confirm();
+  ui.innerHTML = replayHtml();
+}
+
+function stepReplay(dt) {
+  const s = screen;
+  if (s.paused || s.finished) return;
+  s.acc += dt * SPEEDS[s.speed];
+  let steps = 0;
+  while (s.acc >= TICK_MS && steps < 12 && replay.step()) {
+    s.acc -= TICK_MS;
+    steps++;
+    renderer.handleEvents(match.events, match);
+    if (SPEEDS[s.speed] <= 2) for (const e of match.events) playEvent(e);
+  }
+  if (replay.done) {
+    s.finished = true;
+    if (replay.rec.hash && hashState(match) !== replay.rec.hash) toast("This replay plays back differently than it was recorded (a different game version?)");
+    else toast("Replay finished");
+    ui.innerHTML = replayHtml();
+  }
+  const time = document.getElementById("rp-time");
+  if (time) time.textContent = `${fmtTime(replay.tick)} / ${fmtTime(replay.length)}`;
+}
+
+function downloadReplay(rec) {
+  try {
+    const blob = new Blob([JSON.stringify(encodeReplay(rec))], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `lost-footing-${rec.config.stage}-${rec.config.seed}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast("Replay saved");
+  } catch {
+    toast("Couldn't save the replay");
+  }
+}
+
+function loadReplayFile() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,application/json";
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 8e6) return toast("That file is too big to be a replay");
+    const reader = new FileReader();
+    reader.onload = () => {
+      let rec;
+      try {
+        rec = decodeReplay(JSON.parse(String(reader.result)));
+      } catch (e) {
+        return toast(e instanceof SyntaxError ? "Not a usable replay: that isn't JSON" : e.message);
+      }
+      lastRec = rec;
+      startReplay(rec, "file");
+    };
+    reader.onerror = () => toast("Couldn't read that file");
+    reader.readAsText(file);
+  });
+  input.click();
 }
 
 // ---- The loop ----------------------------------------------------------------
@@ -669,19 +805,29 @@ function frame(now) {
   const dt = Math.min(100, now - last);
   last = now;
   const running = screen.name !== "game" || !paused;
-  if (running && match) {
+  if (screen.name === "replay" && replay) {
+    acc = 0;
+    stepReplay(dt);
+  } else if (running && match) {
     acc += dt;
     let steps = 0;
     while (acc >= TICK_MS && steps < 4) {
       acc -= TICK_MS;
       steps++;
-      step(match, demo ? [] : sampleInputs());
+      const inputs = demo ? [] : sampleInputs();
+      if (recording && screen.name === "game") recordTick(recording, inputs);
+      step(match, inputs);
       renderer.handleEvents(match.events, match);
       if (!demo && screen.name === "game") for (const e of match.events) playEvent(e);
       if (demo && match.phase === "over" && match.phaseTimer <= 0) startDemo();
     }
     if (steps === 4) acc = 0;
     if (!demo && match.phase === "over" && match.phaseTimer <= 0 && screen.name === "game") {
+      if (recording) {
+        lastRec = finishRecording(recording, match);
+        lastMatch = match;
+        recording = null;
+      }
       show("results");
     }
   } else {

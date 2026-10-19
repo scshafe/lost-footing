@@ -342,6 +342,15 @@ amplitudes, reversal rhythm) are first guesses.
   inputs give the same hash.
 - The state is plain JSON-able data, which leaves the door open to rollback or
   lockstep online play later.
+- **Replays** (`src/replay.js`) rest on that: a match is its config (seed, stage,
+  stocks, seats with character, difficulty, team, stocks) plus the button mask
+  each seat held every tick. Bots need nothing recorded. The file is JSON
+  (`format: "lost-footing-replay"`, run-length encoded inputs, and the final
+  state's hash). Loading checks everything it is given (stage and characters
+  exist, masks are 0 to 127, the runs add up to the length, at most 30 minutes)
+  and refuses with a reason; at the end of playback the hash is compared, and a
+  mismatch (a replay from a different version of the rules) is reported. A
+  replay can be seeked by restarting and running forward.
 - `state.events` lists what happened this tick (sounds, particles) for the
   client; it is excluded from the hash.
 
@@ -355,6 +364,10 @@ amplitudes, reversal rhythm) are first guesses.
   On the Players screen each seat's Trick key cycles solo / Team A / Team B and
   its up and down keys give a stock handicap (-2 to +2); the Results screen
   announces a winning team. Team letters sit by the name tag and in the HUD.
+- Every match is recorded. The Results screen offers Watch replay (at 0.5x,
+  1x, 2x or 4x with pause and restart, in the same view with the HUD) and Save
+  replay (a JSON download); the title screen's Load replay opens a saved file.
+  Replays are not stored between sessions unless saved.
 - Keys are rebindable on the Controls screen (Enter to edit, Enter on an action,
   then the new key; Backspace restores the default). A rebound action holds one
   key; a key another action uses is refused, and the menu keys (Esc, Enter, M,
@@ -389,4 +402,3 @@ amplitudes, reversal rhythm) are first guesses.
 
 - Online play (lockstep or rollback over the deterministic simulation).
 - Gamepad support (the brief says keyboard only, so this needs the owner's say).
-- Replays from recorded inputs.
