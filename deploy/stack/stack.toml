@@ -20,7 +20,7 @@ required_health_services = ["lost-footing"]
 
 [backup]
 tailscale = true                     # the node identity (always, with a sidecar)
-paths = []                           # app data under state/, e.g. ["state/data"]
+paths = []                           # no app data: the game keeps no state
 
 [env]
 required = ["TS_AUTHKEY"]

@@ -8,8 +8,8 @@ name: lost-footing
 
 services:
   ts-lost-footing:
-    # TODO: pin the digest: docker buildx imagetools inspect tailscale/tailscale:<tag>
-    image: tailscale/tailscale@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    # tailscale/tailscale:v1.102.5 (as mob-survivor-game), multi-arch index digest
+    image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
     container_name: ts-lost-footing
     init: true
     restart: unless-stopped
@@ -37,6 +37,16 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    # The app listens on 127.0.0.1:8080 in the sidecar's namespace, which
-    # serve.json proxies to the tailnet. Add a healthcheck and its own state:
-    #   volumes: ["./state/data:/data"]
+    mem_limit: 256m
+    pids_limit: 128
+    # The server listens on 127.0.0.1:8080 in the sidecar's namespace, which
+    # serve.json proxies to the tailnet. The game keeps no state on the host.
+    environment:
+      LOST_FOOTING_BIND: 127.0.0.1
+      LOST_FOOTING_PORT: "8080"
+    healthcheck:
+      test: ["CMD", "node", "/app/server/serve.js", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -5,8 +5,11 @@
   and DOM code, so Node tests can run it headless.
 - The owner's brief, `docs/brief.md`, is fixed; the design that follows from
   it lives in `docs/design.md`, kept in step with the code.
-- Private repository: GitHub Actions does not run; verify locally and say so
-  in the PR.
+- Public, MIT (`LICENSE`): CI runs on GitHub; wait for it before merging.
+- Deployed by the runner lane (`dev.toml [deploy]`): a merge to `main` builds the
+  `Dockerfile` and deploys `deploy/stack/` on the laptop, served on the tailnet
+  only at `https://lost-footing.<tailnet>/`. `server/serve.js` serves `web/` and
+  `src/` and nothing else; keep anything private out of those two directories.
 
 <!-- scshafe-dev:begin landing -->
 ## Verify and landing
