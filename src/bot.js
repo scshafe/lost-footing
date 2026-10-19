@@ -451,6 +451,7 @@ function planMove(state, p, name, opps, segs, lv) {
       }
       return null;
     }
+    case "Ingot":
     case "Anvil": {
       for (const q of opps) {
         if (!q.ground) continue;
@@ -534,6 +535,35 @@ function planMove(state, p, name, opps, segs, lv) {
     }
     case "Decoy":
       return null; // recovery only (see recover)
+    case "Lodestone": {
+      // Worth placing when someone else's loose metal is about to be mine.
+      const x = f.x + p.facing * 70;
+      const y = p.y + p.h / 2 - 24;
+      if (state.objects.some((o) => o.type === "magnet" && o.owner === p.seat && !o.dead)) return null;
+      for (const o of state.objects) {
+        if (o.owner === p.seat || o.dead) continue;
+        if (o.type !== "anvil" && o.type !== "saw" && o.type !== "charge" && o.type !== "bumper" && o.type !== "lob") continue;
+        const ox = o.w ? o.x + o.w / 2 : o.x;
+        const oy = o.h ? o.y + o.h / 2 : o.y;
+        if (Math.hypot(ox - x, oy - y) < 200) return { value: o.type === "charge" ? 3.5 : 2.5, extra: 0 };
+      }
+      return null;
+    }
+    case "Polarity": {
+      const m = state.objects.find((o) => o.type === "magnet" && o.owner === p.seat && !o.dead && o.armed === 0 && o.mode === "pull");
+      if (!m) return null;
+      let metal = 0;
+      for (const o of state.objects) {
+        if (o.dead || o === m) continue;
+        if (o.type !== "anvil" && o.type !== "saw" && o.type !== "charge" && o.type !== "bumper") continue;
+        const ox = o.w ? o.x + o.w / 2 : o.x;
+        const oy = o.h ? o.y + o.h / 2 : o.y;
+        if (Math.hypot(ox - m.x, oy - m.y) < 60) metal++;
+      }
+      if (!metal) return null;
+      for (const q of opps) if (Math.hypot(q.x + q.w / 2 - m.x, q.y + q.h / 2 - m.y) < 320) return { value: 3, extra: 0 };
+      return null;
+    }
     case "Vine":
       return null; // a ladder, for people
     case "Thorns": {

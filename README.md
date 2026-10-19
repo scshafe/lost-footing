@@ -49,6 +49,7 @@ deploys it (`deploy/stack/`, `.github/workflows/deploy.yml`).
 | Fuse, the demolitionist | Bumper | Charge | Saw | an air bumper bounces him |
 | Dab, the forger | Decoy | Hollow | Rub out | her fake floor holds only her |
 | Fern, the gardener | Vine | Thorns | Roots | her plants sprout slowly and last |
+| Ferro, the magnetist | Lodestone | Polarity | Ingot | takes the loose metal she pulls |
 
 Stages: Crumble Yard (comets), The Quarry (rockfall), Tide Pools (the tide),
 Gale Bridge (gales).

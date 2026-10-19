@@ -150,6 +150,11 @@ export class Renderer {
           this.ring(e.x, e.y, "#ffffff", 34, 12);
           this.sparks(e.x, e.y, 8);
           break;
+        case "polarity":
+          this.ring(e.x, e.y, "#ff7a5a", e.r, 22);
+          this.ring(e.x, e.y, "#ffffff", e.r * 0.5, 14);
+          this.addShake(5);
+          break;
         case "grow":
           this.sparks(e.x, e.y, 3);
           this.dust(e.x, e.y + 4, 3, "#49b04a88");
@@ -667,7 +672,61 @@ export class Renderer {
           ctx.stroke();
           break;
         }
+        case "magnet": {
+          const push = o.mode === "push";
+          const col = push ? "#ff7a5a" : "#6ab0ff";
+          const R = OBJ.magnet.pull;
+          ctx.globalAlpha = o.armed > 0 ? 0.4 : o.life < 60 && Math.floor(o.life / 5) % 2 === 0 ? 0.5 : 1;
+          // Field rings drift in (pull) or out (push).
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 1.5;
+          for (let k = 0; k < 3; k++) {
+            const t = ((this.frame * 1.6 + (k * R) / 3) % R) / R;
+            ctx.save();
+            ctx.globalAlpha = (o.armed > 0 ? 0.1 : 0.28) * (1 - t);
+            ctx.beginPath();
+            ctx.arc(o.x, o.y, R * (push ? t : 1 - t), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+          // The horseshoe, open at the top.
+          ctx.lineWidth = 7;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = "#cfd3da";
+          ctx.beginPath();
+          ctx.arc(o.x, o.y + 2, o.r * 0.75, 0, Math.PI);
+          ctx.stroke();
+          ctx.strokeStyle = push ? "#ff7a5a" : "#ff5a5f";
+          ctx.beginPath();
+          ctx.moveTo(o.x - o.r * 0.75, o.y + 2);
+          ctx.lineTo(o.x - o.r * 0.75, o.y - 9);
+          ctx.stroke();
+          ctx.strokeStyle = push ? "#ff5a5f" : "#4aa8ff";
+          ctx.beginPath();
+          ctx.moveTo(o.x + o.r * 0.75, o.y + 2);
+          ctx.lineTo(o.x + o.r * 0.75, o.y - 9);
+          ctx.stroke();
+          ctx.lineCap = "butt";
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(o.x, o.y, o.r + 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          break;
+        }
         case "anvil": {
+          if (o.ingot) {
+            ctx.fillStyle = "#c9ced6";
+            roundRect(ctx, o.x, o.y + 6, o.w, o.h - 12, 3);
+            ctx.fill();
+            ctx.strokeStyle = c;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(o.x + 3, o.y + 8, o.w - 6, 2);
+            break;
+          }
           ctx.fillStyle = "#3d4048";
           ctx.beginPath();
           ctx.moveTo(o.x, o.y);
@@ -999,6 +1058,25 @@ export class Renderer {
         ctx.beginPath();
         ctx.arc(sway * 1.5, top - 16, 4, 0, Math.PI * 2);
         ctx.fill();
+        break;
+      }
+      case "ferro": {
+        // A horseshoe magnet on the head.
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#cfd3da";
+        ctx.beginPath();
+        ctx.arc(0, top - 1, 7, 0, Math.PI);
+        ctx.stroke();
+        ctx.strokeStyle = "#ff5a5f";
+        ctx.beginPath();
+        ctx.moveTo(-7, top - 1);
+        ctx.lineTo(-7, top - 8);
+        ctx.stroke();
+        ctx.strokeStyle = "#4aa8ff";
+        ctx.beginPath();
+        ctx.moveTo(7, top - 1);
+        ctx.lineTo(7, top - 8);
+        ctx.stroke();
         break;
       }
       case "fern": {

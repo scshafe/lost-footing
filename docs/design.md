@@ -167,6 +167,8 @@ Move keys are the same role for everyone:
 
 | **Fern**, the gardener (patient: slow to sprout, long to last) | **Vine**: a seed 50 px ahead; after 0.5 s it grows four one-way leaves (56 x 12) in a zigzag, 38 px either side of the seed and 64 px apart, one every 0.2 s, each lasting about 7 s. Anyone can climb it. Needs ground. 2 at once, cd 5.5 s. | **Thorns**: a 150 px bramble patch starting 30 px ahead, growing for 0.4 s, then 5 s. Standing in it: speed x0.4, accel x0.5, jump x0.8, and it adds 1/130 stress per tick to crumble tiles under it (more than they shed, so an empty patch still wears them down in about 4 s). 2 at once, cd 4 s. | **Roots**: a seed 110 px ahead. For 1 s the tiles within 125 px shake (stress held at 0.48); then they are doomed and break within half a second; slabs in reach take 1 damage. 1 at once, cd 5.5 s. |
 
+| **Ferro**, the magnetist (takes what she pulls) | **Lodestone**: a floating magnet 70 px ahead (arms in 0.17 s), 5 s, 1 at once, cd 2.5 s. Loose metal within 240 px (anvils, saws, charges, lobs in flight, bumpers) is pulled toward it, harder the closer it is, and hangs on it once within 24 px. Whatever it pulls changes owner to Ferro, and so does the credit for what it does next. | **Polarity**: flips her lodestone for 2.5 s. Everything loose within 240 px is thrown away from it at 11 px/tick, and it pushes (instead of pulling) until the flip ends. Needs a lodestone. cd 6 s. | **Ingot**: a thrown iron bar (an anvil that breaks only the tile or two it first lands on, or cracks a slab by 2, then is spent). cd 3.5 s. |
+
 Interactions that are built in (the combination space is the point):
 
 - **Glue on crumble = a trap.** Glue makes you "still", so the tile under you
@@ -184,6 +186,12 @@ Interactions that are built in (the combination space is the point):
 - **Walls pin**: pressing into a wall keeps you "still", so your tile crumbles.
 - **Decoy + Rub out**: Dab can erase the real floor next to her decoy and walk
   on across the gap.
+- **Lodestone + anything loose**: it steals enemy anvils, saws, charges and
+  bumpers; a stolen charge hangs on the lodestone and explodes there; a
+  lodestone near a bumper carries it into the fight. A Charge also destroys
+  lodestones.
+- **Lodestone + Polarity**: park an anvil on the lodestone, then flip it to fire
+  the anvil away: downward, it punches through the floor.
 - **Vine + Roots / Rub out**: climb a vine and the floor you left can be taken
   out from under the ones chasing you.
 - **Thorns + anything that keeps you still**: slowed players are easy to pin
@@ -282,7 +290,9 @@ Each tick a bot:
    jump) come out when it is falling with nothing below. Dab's bot hollows
    tiles under an opponent on its tier and rubs out the floor ahead of one;
    Fern's bot grows thorns in an opponent's path and plants roots under one
-   (the vine is left to people). Bots treat thorns and a growing root bulge as
+   (the vine is left to people); Ferro's bot places a lodestone where someone
+   else's loose metal is about to pass and flips it with metal hanging on it
+   and an opponent in reach. Bots treat thorns and a growing root bulge as
    dangerous floor.
 
 Three levels: **easy** (reacts in 0.4 s, rarely uses moves, misjudges throws,
@@ -328,7 +338,7 @@ collapse.
   Off-screen players get an arrow at the screen edge in their colour.
 - Player colours are per seat (P1 red, P2 blue, P3 green, P4 gold); characters
   differ in silhouette (Mason's hard hat, Glim's hood, Pip's antenna, Fuse's
-  goggles and spark, Dab's beret, Fern's sprout).
+  goggles and spark, Dab's beret, Fern's sprout, Ferro's magnet).
 - Tiles jitter and redden as stress rises, crack when doomed, and fall
   tumbling; respawning tiles flicker in outline. Hazard warnings are lane
   stripes, shadows and edge arrows with a siren.
@@ -341,6 +351,8 @@ collapse.
 - Fern's plants: a seed and a shoot while a vine sprouts (then green leaves,
   wilting yellow in the last second); thorns grow up as spikes; roots show a
   dashed circle that tightens and a swelling mound.
+- Ferro's lodestone: a horseshoe with field rings that drift in (pull) or out
+  (push, in red); an ingot is a silver bar.
 - Synthesized sound (WebAudio, no files), mute with M.
 - KOs flash at the blast zone in the victim's colour, shake the screen and
   post to a feed ("P1's glue → P3").
@@ -351,6 +363,5 @@ collapse.
 
 - Online play (lockstep or rollback over the deterministic simulation).
 - Gamepad support (the brief says keyboard only, so this needs the owner's say).
-- More characters: a magnet user (pulls placeables).
 - Moving stages (a sinking ship, a conveyor sky).
 - Team mode and handicaps; replays from recorded inputs.

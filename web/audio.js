@@ -133,7 +133,7 @@ export const sfx = {
   },
   place(obj) {
     if (!ok("place", 30)) return;
-    const f = { wall: 140, spring: 520, gust: 300, bumper: 700, ledge: 240, decoy: 620, hollow: 330, rub: 260, vine: 480, roots: 150 }[obj] || 400;
+    const f = { wall: 140, spring: 520, gust: 300, bumper: 700, ledge: 240, decoy: 620, hollow: 330, rub: 260, vine: 480, roots: 150, magnet: 380 }[obj] || 400;
     tone({ f, f2: f * 1.5, dur: 0.12, type: "square", vol: 0.12 });
     if (obj === "wall" || obj === "ledge") noise({ dur: 0.15, freq: 400, vol: 0.15 });
     if (obj === "roots") noise({ dur: 0.25, freq: 250, vol: 0.15 });
@@ -236,6 +236,11 @@ export const sfx = {
     [523, 659, 784, 1047].forEach((f, i) => tone({ f, dur: 0.25, type: "square", vol: 0.12, delay: i * 0.13 }));
     tone({ f: 1047, dur: 0.7, type: "triangle", vol: 0.15, delay: 0.55 });
   },
+  polarity() {
+    if (!ok("polarity", 100)) return;
+    tone({ f: 180, f2: 900, dur: 0.18, type: "sawtooth", vol: 0.14 });
+    noise({ dur: 0.2, freq: 800, f2: 200, type: "bandpass", q: 2, vol: 0.12 });
+  },
   grow() {
     if (ok("grow", 70)) tone({ f: 400, f2: 700, dur: 0.12, type: "sine", vol: 0.1 });
   },
@@ -327,6 +332,8 @@ export function playEvent(e) {
       return sfx.overtime();
     case "win":
       return sfx.win();
+    case "polarity":
+      return sfx.polarity();
     case "grow":
       return sfx.grow();
     case "rootBurst":
