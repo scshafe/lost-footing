@@ -39,3 +39,15 @@ params = { kind = "native", name = "lost-footing", date = "2026-10-15" }
 [identity]
 agent = "agent-lost-footing"
 github = ["contents=write", "pull_requests=write", "issues=write", "workflows=write", "actions=write"]
+
+# The runner lane (scshafe infra docs/platform/agent-deploy.md): a merge to main
+# deploys deploy/stack/ on the laptop; the game is served on the tailnet only,
+# at https://lost-footing.<tailnet>/.
+[deploy]
+lane = "runner"
+stack = "lost-footing"
+layout = "app"
+host = "laptop"
+tailnet_node = "lost-footing"
+door = "none"
+verify_on = "hosted"
