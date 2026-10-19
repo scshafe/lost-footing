@@ -22,6 +22,8 @@ export function newHazardState(stage) {
       ? { level: stage.hazards.find((h) => h.type === "tide").low, phase: "calm", timer: 0, spec: stage.hazards.findIndex((h) => h.type === "tide") }
       : null,
     gale: null, // { phase: "warn" | "blow", dir, timer, force }
+    // Conveyor belts: they run one way (sign), then stop for a warning, then flip.
+    belts: stage.hazards.some((h) => h.type === "belts") ? { phase: "run", sign: 1, timer: 0, spec: stage.hazards.findIndex((h) => h.type === "belts") } : null,
   };
 }
 
@@ -31,6 +33,7 @@ export function updateHazards(state, stage) {
     stage.hazards.forEach((spec, i) => {
       if (spec.type === "tide" && hz.tide.phase !== "calm") return;
       if (spec.type === "gale" && hz.gale) return;
+      if (spec.type === "belts") return; // runs on its own clock (updateBelts)
       if (--hz.timers[i] > 0) return;
       hz.timers[i] = Math.round(randInt(state, spec.every[0], spec.every[1]) * state.hazardMult);
       fire(state, spec);
@@ -38,6 +41,7 @@ export function updateHazards(state, stage) {
   }
   updateTide(state, stage);
   updateGale(state);
+  updateBelts(state, stage);
   for (const h of hz.list) {
     switch (h.type) {
       case "cometWarn":
@@ -190,6 +194,27 @@ function updateRock(state, r) {
   }
   if (r.dead) addEvent(state, { type: "rockSmash", x: r.x, y: r.y });
   if (r.y > 1100) r.dead = true;
+}
+
+// Belts run for a while, stop (the warning), then run the other way.
+function updateBelts(state, stage) {
+  const b = state.hazards.belts;
+  if (!b) return;
+  const spec = stage.hazards[b.spec];
+  if (state.phase !== "play") return;
+  if (b.phase === "run") {
+    if (b.timer <= 0) b.timer = Math.round(randInt(state, spec.every[0], spec.every[1]) * state.hazardMult);
+    if (--b.timer <= 0) {
+      b.phase = "stop";
+      b.timer = spec.warn;
+      addEvent(state, { type: "warn", hazard: "belts" });
+    }
+  } else if (--b.timer <= 0) {
+    b.phase = "run";
+    b.sign = -b.sign;
+    b.timer = 0;
+    addEvent(state, { type: "beltsFlip", sign: b.sign });
+  }
 }
 
 function updateTide(state, stage) {

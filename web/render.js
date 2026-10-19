@@ -202,6 +202,7 @@ export class Renderer {
         case "warn":
           if (e.hazard === "tide") this.banner("TIDE INCOMING", "#59d0ff", 90, 60);
           if (e.hazard === "gale") this.banner(e.dir > 0 ? "GALE  →" : "←  GALE", "#cfe9ff", 80, 60);
+          if (e.hazard === "belts") this.banner("BELTS REVERSING", "#ffb347", 80, 60);
           break;
       }
     }
@@ -424,6 +425,7 @@ export class Renderer {
     ctx.moveTo(10, 0);
     ctx.lineTo(10, h / 2);
     ctx.stroke();
+    if (t.beltDir) this.drawBelt(t, w, h);
     if (s >= CRUMBLE.doomAt || t.state === "falling") {
       ctx.strokeStyle = "rgba(20,0,0,0.8)";
       ctx.lineWidth = 2;
@@ -436,6 +438,28 @@ export class Renderer {
       ctx.lineTo(8, h / 2);
       ctx.stroke();
     }
+  }
+
+  // Conveyor chevrons slide the way the belt runs; orange and still while it is stopped.
+  drawBelt(t, w, h) {
+    const { ctx } = this;
+    const running = t.belt !== 0;
+    const dir = running ? Math.sign(t.belt) : t.beltDir;
+    const off = running ? ((this.frame * Math.abs(t.belt) * 0.6) % 12) * dir : 0;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-w / 2 + 1, -h / 2, w - 2, h);
+    ctx.clip();
+    ctx.strokeStyle = running ? "rgba(255,255,255,0.5)" : "rgba(255,160,60,0.85)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = -w / 2 - 12 + off; x < w / 2 + 12; x += 12) {
+      ctx.moveTo(x - 3 * dir, -h / 2 + 4);
+      ctx.lineTo(x + 3 * dir, 0);
+      ctx.lineTo(x - 3 * dir, h / 2 - 4);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawSlab(t, theme) {
